@@ -1,0 +1,30 @@
+{
+    "appKeys": {},
+    "capabilities": [
+        ""
+    ],
+    "companyName": "alexkuz@gmail.com",
+    "longName": "Tomato",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "images/read.png",
+                "name": "IMAGE_READ",
+                "type": "png"
+            },
+            {
+                "file": "images/work.png",
+                "name": "IMAGE_WORK",
+                "type": "png"
+            }
+        ]
+    },
+    "shortName": "Tomato",
+    "uuid": "01629516-8184-46ee-a211-c0bdcc80fb0f",
+    "versionCode": 1,
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": false
+    }
+}
