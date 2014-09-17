@@ -9,6 +9,12 @@
     "resources": {
         "media": [
             {
+                "characterRegex": "[0-9:.]",
+                "file": "fonts/red-october.regular.ttf",
+                "name": "FONT_RED_OCTOBER_16",
+                "type": "font"
+            },
+            {
                 "file": "images/read.png",
                 "name": "IMAGE_READ",
                 "type": "png"

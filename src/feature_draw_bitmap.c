@@ -136,12 +136,14 @@ static void window_load() {
   layer = layer_create(bounds);
   layer_set_update_proc(layer, layer_draw_image);
   layer_add_child(window_layer, layer);
-
+  
+  GFont custom_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_RED_OCTOBER_16));
+  
   bounds =  (GRect) { .origin = { 10, 10 }, .size = { 70, 24 } };
   time_layer = text_layer_create(bounds);
+  text_layer_set_font(time_layer, custom_font);
   text_layer_set_background_color(time_layer, GColorClear);
   text_layer_set_text_color(time_layer, GColorBlack);
-  text_layer_set_font(time_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   layer_add_child(window_layer, text_layer_get_layer(time_layer));
 
   bounds =  (GRect) { .origin = { 7, 2 }, .size = { 50, 50 } };
@@ -151,9 +153,9 @@ static void window_load() {
 
   bounds =  (GRect) { .origin = { 144 - 30, 148 - 30 }, .size = { 25, 25 } };
   iteration_layer = text_layer_create(bounds);
+  text_layer_set_font(iteration_layer, custom_font);
   text_layer_set_background_color(iteration_layer, GColorWhite);
   text_layer_set_text_color(iteration_layer, GColorBlack);
-  text_layer_set_font(iteration_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(iteration_layer, GTextAlignmentRight);
   layer_add_child(window_layer, text_layer_get_layer(iteration_layer));
 }
