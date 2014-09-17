@@ -9,13 +9,13 @@
     "resources": {
         "media": [
             {
-                "file": "images/read.png",
-                "name": "IMAGE_READ",
+                "file": "images/work.png",
+                "name": "IMAGE_WORK",
                 "type": "png"
             },
             {
-                "file": "images/work.png",
-                "name": "IMAGE_WORK",
+                "file": "images/read.png",
+                "name": "IMAGE_READ",
                 "type": "png"
             }
         ]

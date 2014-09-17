@@ -12,12 +12,11 @@ static TextLayer *iteration_layer;
 static GBitmap *work_image;
 static GBitmap *relax_image;
 
-static int state = WORK_STATE;
-
 static int exec_state = RUNNING_EXEC_STATE;
 static int last_elapsed;
 
-static time_t last_time;
+static TomatoSettings settings;
+  
 static time_t cur_time;
 
 static int iteration = 1;
@@ -28,13 +27,13 @@ static int current_duration = WORK_DURATION;
 static int increment_time = INCREMENT_TIME;
 
 static void layer_draw_image(Layer *me, GContext* ctx) {
-  GBitmap *image = (state == WORK_STATE) ? work_image : relax_image;
+  GBitmap *image = (settings.state == WORK_STATE) ? work_image : relax_image;
   GRect bounds = image->bounds;
   graphics_draw_bitmap_in_rect(ctx, image, (GRect) { .origin = { 0, 0 }, .size = bounds.size });
 }
 
 static void layer_draw_arc(Layer *me, GContext* ctx) {
-  int end_angle = TRIG_MAX_ANGLE * (cur_time - last_time) / current_duration;
+  int end_angle = TRIG_MAX_ANGLE * (cur_time - settings.last_time) / current_duration;
   if (!end_angle) {
     return;
   }
@@ -49,8 +48,8 @@ void print_iteration() {
 }
 
 void toggle_work_relax(int skip) {
-  if (state == WORK_STATE) {
-    state = RELAX_STATE;
+  if (settings.state == WORK_STATE) {
+    settings.state = RELAX_STATE;
     current_duration = relax_duration;
     layer_mark_dirty(layer);
     vibes_short_pulse();
@@ -58,7 +57,7 @@ void toggle_work_relax(int skip) {
     if (!skip) {
       iteration++;
     }
-    state = WORK_STATE;
+    settings.state = WORK_STATE;
     current_duration = work_duration;
     layer_mark_dirty(layer);
     vibes_double_pulse();
@@ -69,7 +68,7 @@ void toggle_work_relax(int skip) {
 
 void update_time() {
   static char buffer[] = "00:00";
-  time_t diff = last_time + current_duration - cur_time;
+  time_t diff = settings.last_time + current_duration - cur_time;
   strftime(buffer, sizeof("00:00"), "%M:%S", localtime(&diff));
   text_layer_set_text(time_layer, buffer);
   layer_mark_dirty(arc_layer);
@@ -78,17 +77,17 @@ void update_time() {
 void toggle_pause() {
   cur_time = time(NULL);
   if (exec_state == RUNNING_EXEC_STATE) {
-    last_elapsed = cur_time - last_time;
+    last_elapsed = cur_time - settings.last_time;
     exec_state = PAUSED_EXEC_STATE;
   } else {
-    last_time = cur_time - last_elapsed;
+    settings.last_time = cur_time - last_elapsed;
     exec_state = RUNNING_EXEC_STATE;
   }
 }
 
 void up_click_handler(ClickRecognizerRef recognizer, void *context) {
   cur_time = time(NULL);
-  last_time = cur_time;
+  settings.last_time = cur_time;
   toggle_work_relax(TRUE);
   
   update_time();
@@ -117,8 +116,8 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
 
   cur_time = time(NULL);
   
-  if(cur_time - last_time > current_duration) {
-    last_time = cur_time;
+  if(cur_time - settings.last_time > current_duration) {
+    settings.last_time = cur_time;
     toggle_work_relax(FALSE);
   }
   
@@ -133,18 +132,7 @@ void config_provider(void *context) {
   window_multi_click_subscribe(BUTTON_ID_DOWN, 2, 2, 0, true, down_doubleclick_handler);
 }
 
-int main(void) {
-  read_settings();
-
-  window = window_create();
-  window_stack_push(window, true /* Animated */);
-  
-  last_time = time(NULL);
-  
-  window_set_click_config_provider(window, config_provider);
-  
-  tick_timer_service_subscribe(SECOND_UNIT, handle_tick);
-
+static void window_load() {
   // Init the layer for display the image
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_frame(window_layer);
@@ -171,14 +159,27 @@ int main(void) {
   text_layer_set_font(iteration_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(iteration_layer, GTextAlignmentRight);
   layer_add_child(window_layer, text_layer_get_layer(iteration_layer));
+}
+
+static void init() {
+  settings = read_settings();
+
+  window = window_create();
+  window_stack_push(window, true /* Animated */);
   
+  window_set_click_config_provider(window, config_provider);
+  
+  tick_timer_service_subscribe(SECOND_UNIT, handle_tick);
+  
+  window_load();
+
   print_iteration();
 
   work_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_WORK);
-  relax_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_READ);
+  relax_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_READ);  
+}
 
-  app_event_loop();
-
+static void window_unload() {
   gbitmap_destroy(work_image);
   gbitmap_destroy(relax_image);
   
@@ -186,9 +187,18 @@ int main(void) {
   layer_destroy(layer);
   layer_destroy(arc_layer);
   text_layer_destroy(time_layer);
-  text_layer_destroy(iteration_layer);
+  text_layer_destroy(iteration_layer);  
 }
 
 static void deinit(void) {
-  save_settings();
+  save_settings(settings);
+  
+  window_unload();
 }
+
+int main(void) {
+  init();
+  app_event_loop();
+  deinit();
+}
+

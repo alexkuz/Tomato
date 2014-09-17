@@ -19,6 +19,12 @@
 #define LAST_TIME_DEFAULT 0
 #define STATE_DEFAULT 0
 
+#include "pebble.h"
+
+typedef struct TomatoSettings {
+  int last_time;
+  int state;
+} TomatoSettings;
 
 static int32_t read_int(const uint32_t key, int32_t def_value) {
   if (persist_exists(key)) {
@@ -28,12 +34,15 @@ static int32_t read_int(const uint32_t key, int32_t def_value) {
   }
 }
 
-static void read_settings() {
-  last_time = read_int(LAST_TIME_KEY, LAST_TIME_DEFAULT);
-  state = read_int(STATE_KEY, STATE_DEFAULT);
+static TomatoSettings read_settings() {
+  TomatoSettings settings = {
+    read_int(LAST_TIME_KEY, time(NULL)),
+    read_int(STATE_KEY, STATE_DEFAULT)
+  };
+  return settings;
 }
 
-static void save_settings() {
-  persist_write_int(LAST_TIME_KEY, last_time);
-  persist_write_int(STATE_KEY, state);
+static void save_settings(TomatoSettings settings) {
+  persist_write_int(LAST_TIME_KEY, settings.last_time);
+  persist_write_int(STATE_KEY, settings.state);
 }
