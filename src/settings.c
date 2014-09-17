@@ -15,6 +15,7 @@
 
 #define LAST_TIME_KEY 0
 #define STATE_KEY 1
+#define CURRENT_DURATION_KEY 2
 
 #define LAST_TIME_DEFAULT 0
 #define STATE_DEFAULT 0
