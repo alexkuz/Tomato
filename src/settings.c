@@ -24,6 +24,7 @@
 typedef struct TomatoSettings {
   int last_time;
   int state;
+  int current_duration;
 } TomatoSettings;
 
 static int32_t read_int(const uint32_t key, int32_t def_value) {
@@ -37,7 +38,8 @@ static int32_t read_int(const uint32_t key, int32_t def_value) {
 static TomatoSettings read_settings() {
   TomatoSettings settings = {
     read_int(LAST_TIME_KEY, time(NULL)),
-    read_int(STATE_KEY, STATE_DEFAULT)
+    read_int(STATE_KEY, STATE_DEFAULT),
+    read_int(CURRENT_DURATION_KEY, WORK_DURATION)
   };
   return settings;
 }
@@ -45,4 +47,5 @@ static TomatoSettings read_settings() {
 static void save_settings(TomatoSettings settings) {
   persist_write_int(LAST_TIME_KEY, settings.last_time);
   persist_write_int(STATE_KEY, settings.state);
+  persist_write_int(CURRENT_DURATION_KEY, settings.current_duration);
 }

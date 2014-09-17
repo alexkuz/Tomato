@@ -17,14 +17,15 @@ static int last_elapsed;
 
 static TomatoSettings settings;
   
-static time_t cur_time;
-
 static int iteration = 1;
 
 static int work_duration = WORK_DURATION;
 static int relax_duration = RELAX_DURATION;
-static int current_duration = WORK_DURATION;
 static int increment_time = INCREMENT_TIME;
+
+static int passed_time() {
+  return time(NULL) - settings.last_time;
+}
 
 static void layer_draw_image(Layer *me, GContext* ctx) {
   GBitmap *image = (settings.state == WORK_STATE) ? work_image : relax_image;
@@ -33,7 +34,7 @@ static void layer_draw_image(Layer *me, GContext* ctx) {
 }
 
 static void layer_draw_arc(Layer *me, GContext* ctx) {
-  int end_angle = TRIG_MAX_ANGLE * (cur_time - settings.last_time) / current_duration;
+  int end_angle = TRIG_MAX_ANGLE * passed_time() / settings.current_duration;
   if (!end_angle) {
     return;
   }
@@ -50,7 +51,7 @@ void print_iteration() {
 void toggle_work_relax(int skip) {
   if (settings.state == WORK_STATE) {
     settings.state = RELAX_STATE;
-    current_duration = relax_duration;
+    settings.current_duration = relax_duration;
     layer_mark_dirty(layer);
     vibes_short_pulse();
   } else {
@@ -58,7 +59,7 @@ void toggle_work_relax(int skip) {
       iteration++;
     }
     settings.state = WORK_STATE;
-    current_duration = work_duration;
+    settings.current_duration = work_duration;
     layer_mark_dirty(layer);
     vibes_double_pulse();
 
@@ -68,39 +69,37 @@ void toggle_work_relax(int skip) {
 
 void update_time() {
   static char buffer[] = "00:00";
-  time_t diff = settings.last_time + current_duration - cur_time;
+  time_t diff = settings.current_duration - passed_time();
   strftime(buffer, sizeof("00:00"), "%M:%S", localtime(&diff));
   text_layer_set_text(time_layer, buffer);
   layer_mark_dirty(arc_layer);
 }
 
 void toggle_pause() {
-  cur_time = time(NULL);
   if (exec_state == RUNNING_EXEC_STATE) {
-    last_elapsed = cur_time - settings.last_time;
+    last_elapsed = passed_time();
     exec_state = PAUSED_EXEC_STATE;
   } else {
-    settings.last_time = cur_time - last_elapsed;
+    settings.last_time = time(NULL) - last_elapsed;
     exec_state = RUNNING_EXEC_STATE;
   }
 }
 
 void up_click_handler(ClickRecognizerRef recognizer, void *context) {
-  cur_time = time(NULL);
-  settings.last_time = cur_time;
+  settings.last_time = time(NULL);
   toggle_work_relax(TRUE);
   
   update_time();
 }
 
 void down_click_handler(ClickRecognizerRef recognizer, void *context) {
-  current_duration = current_duration + increment_time;
+  settings.current_duration += increment_time;
   
   update_time();
 }
 
 void down_doubleclick_handler(ClickRecognizerRef recognizer, void *context) {
-  current_duration = current_duration - increment_time;
+  settings.current_duration -= increment_time;
   
   update_time();
 }
@@ -114,10 +113,8 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
     return;
   }
 
-  cur_time = time(NULL);
-  
-  if(cur_time - settings.last_time > current_duration) {
-    settings.last_time = cur_time;
+  if(passed_time() > settings.current_duration) {
+    settings.last_time = time(NULL);
     toggle_work_relax(FALSE);
   }
   
