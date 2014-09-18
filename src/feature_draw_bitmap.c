@@ -17,8 +17,6 @@ static int last_elapsed;
 
 static TomatoSettings settings;
   
-static int iteration = 1;
-
 static int work_duration = WORK_DURATION;
 static int relax_duration = RELAX_DURATION;
 static int increment_time = INCREMENT_TIME;
@@ -38,26 +36,26 @@ static void layer_draw_arc(Layer *me, GContext* ctx) {
   if (!end_angle) {
     return;
   }
-  graphics_draw_arc(ctx, GPoint(25, 25), 25, 6, -angle_90, end_angle - angle_90, GColorBlack);
+  graphics_draw_arc(ctx, GPoint(20, 20), 20, 6, -angle_90, end_angle - angle_90, GColorBlack);
 }
 
 
 void print_iteration() {
     static char buffer[] = "99";
-    snprintf(buffer, sizeof("99"), "%d", iteration);
+    snprintf(buffer, sizeof("99"), "%d", settings.iteration);
     text_layer_set_text(iteration_layer, buffer);  
 }
 
 void toggle_work_relax(int skip) {
   if (settings.state == WORK_STATE) {
+    if (!skip) {
+      settings.iteration++;
+    }
     settings.state = RELAX_STATE;
     settings.current_duration = relax_duration;
     layer_mark_dirty(layer);
     vibes_short_pulse();
   } else {
-    if (!skip) {
-      iteration++;
-    }
     settings.state = WORK_STATE;
     settings.current_duration = work_duration;
     layer_mark_dirty(layer);
@@ -87,7 +85,7 @@ void toggle_pause() {
 
 void up_click_handler(ClickRecognizerRef recognizer, void *context) {
   settings.last_time = time(NULL);
-  toggle_work_relax(TRUE);
+  toggle_work_relax(true);
   
   update_time();
 }
@@ -115,7 +113,7 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
 
   if(passed_time() > settings.current_duration) {
     settings.last_time = time(NULL);
-    toggle_work_relax(FALSE);
+    toggle_work_relax(false);
   }
   
   update_time();
@@ -130,8 +128,11 @@ void config_provider(void *context) {
 }
 
 static void window_load() {
+  window_set_fullscreen(window, true);
+
   // Init the layer for display the image
   Layer *window_layer = window_get_root_layer(window);
+  
   GRect bounds = layer_get_frame(window_layer);
   layer = layer_create(bounds);
   layer_set_update_proc(layer, layer_draw_image);
@@ -139,25 +140,26 @@ static void window_load() {
   
   GFont custom_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_RED_OCTOBER_16));
   
-  bounds =  (GRect) { .origin = { 10, 10 }, .size = { 70, 24 } };
+  bounds =  (GRect) { .origin = { 144 - 55 - 5, 168 - 24 - 10 }, .size = { 55, 24 } };
   time_layer = text_layer_create(bounds);
   text_layer_set_font(time_layer, custom_font);
-  text_layer_set_background_color(time_layer, GColorClear);
+  text_layer_set_background_color(time_layer, GColorWhite);
   text_layer_set_text_color(time_layer, GColorBlack);
+  text_layer_set_text_alignment(time_layer, GTextAlignmentLeft);
   layer_add_child(window_layer, text_layer_get_layer(time_layer));
 
-  bounds =  (GRect) { .origin = { 7, 2 }, .size = { 50, 50 } };
-  arc_layer = layer_create(bounds);
-  layer_set_update_proc(arc_layer, layer_draw_arc);
-  layer_add_child(window_layer, arc_layer);
-
-  bounds =  (GRect) { .origin = { 144 - 30, 148 - 30 }, .size = { 25, 25 } };
+  bounds =  (GRect) { .origin = { 15, 15 }, .size = { 30, 24 } };
   iteration_layer = text_layer_create(bounds);
   text_layer_set_font(iteration_layer, custom_font);
   text_layer_set_background_color(iteration_layer, GColorWhite);
   text_layer_set_text_color(iteration_layer, GColorBlack);
-  text_layer_set_text_alignment(iteration_layer, GTextAlignmentRight);
+  text_layer_set_text_alignment(iteration_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(iteration_layer));
+
+  bounds =  (GRect) { .origin = { 7, 2 }, .size = { 40, 40 } };
+  arc_layer = layer_create(bounds);
+  layer_set_update_proc(arc_layer, layer_draw_arc);
+  layer_add_child(window_layer, arc_layer);
 }
 
 static void init() {
