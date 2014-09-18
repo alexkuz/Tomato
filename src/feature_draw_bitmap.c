@@ -5,6 +5,7 @@
 static Window *window;
 
 static Layer *layer;
+static Layer *time_rect_layer;
 static TextLayer *time_layer;
 static Layer *arc_layer;
 static TextLayer *iteration_layer;
@@ -31,12 +32,22 @@ static void layer_draw_image(Layer *me, GContext* ctx) {
   graphics_draw_bitmap_in_rect(ctx, image, (GRect) { .origin = { 0, 0 }, .size = bounds.size });
 }
 
+static void layer_draw_time_rect(Layer *me, GContext* ctx) {
+  graphics_context_set_fill_color(ctx, GColorWhite);
+  graphics_context_set_stroke_color(ctx, GColorBlack);
+  GRect bounds = layer_get_bounds(me);
+  graphics_fill_rect(ctx, bounds, 3, GCornersAll);
+  graphics_draw_round_rect(ctx, bounds, 3);
+}
+
+
 static void layer_draw_arc(Layer *me, GContext* ctx) {
   int end_angle = TRIG_MAX_ANGLE * passed_time() / settings.current_duration;
   if (!end_angle) {
     return;
   }
   graphics_draw_arc(ctx, GPoint(20, 20), 20, 6, -angle_90, end_angle - angle_90, GColorBlack);
+  graphics_draw_arc(ctx, GPoint(20, 20), 20, 2, end_angle - angle_90, angle_270, GColorBlack);
 }
 
 
@@ -127,9 +138,7 @@ void config_provider(void *context) {
   window_multi_click_subscribe(BUTTON_ID_DOWN, 2, 2, 0, true, down_doubleclick_handler);
 }
 
-static void window_load() {
-  window_set_fullscreen(window, true);
-
+static void window_load(Window *window) {
   // Init the layer for display the image
   Layer *window_layer = window_get_root_layer(window);
   
@@ -138,17 +147,24 @@ static void window_load() {
   layer_set_update_proc(layer, layer_draw_image);
   layer_add_child(window_layer, layer);
   
-  GFont custom_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_RED_OCTOBER_16));
+  GFont custom_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_RED_OCTOBER_18));
+  //GFont custom_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_RUSSIAN_16));
+  //GFont custom_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_GAGARIN_24));
   
-  bounds =  (GRect) { .origin = { 144 - 55 - 5, 168 - 24 - 10 }, .size = { 55, 24 } };
+  bounds = (GRect) { .origin = { 144 - 60 - 10, 168 - 24 - 12 }, .size = { 65, 26 } };
+  time_rect_layer = layer_create(bounds);
+  layer_set_update_proc(time_rect_layer, layer_draw_time_rect);
+  layer_add_child(window_layer, time_rect_layer);
+
+  bounds =  (GRect) { .origin = { 144 - 60 - 5, 168 - 24 - 10 }, .size = { 60, 24 } };
   time_layer = text_layer_create(bounds);
   text_layer_set_font(time_layer, custom_font);
-  text_layer_set_background_color(time_layer, GColorWhite);
+  text_layer_set_background_color(time_layer, GColorClear);
   text_layer_set_text_color(time_layer, GColorBlack);
   text_layer_set_text_alignment(time_layer, GTextAlignmentLeft);
   layer_add_child(window_layer, text_layer_get_layer(time_layer));
-
-  bounds =  (GRect) { .origin = { 15, 15 }, .size = { 30, 24 } };
+  
+  bounds =  (GRect) { .origin = { 15, 17 }, .size = { 30, 24 } };
   iteration_layer = text_layer_create(bounds);
   text_layer_set_font(iteration_layer, custom_font);
   text_layer_set_background_color(iteration_layer, GColorWhite);
@@ -156,45 +172,51 @@ static void window_load() {
   text_layer_set_text_alignment(iteration_layer, GTextAlignmentCenter);
   layer_add_child(window_layer, text_layer_get_layer(iteration_layer));
 
-  bounds =  (GRect) { .origin = { 7, 2 }, .size = { 40, 40 } };
+  bounds =  (GRect) { .origin = { 8, 8 }, .size = { 40, 40 } };
   arc_layer = layer_create(bounds);
   layer_set_update_proc(arc_layer, layer_draw_arc);
   layer_add_child(window_layer, arc_layer);
-}
-
-static void init() {
-  settings = read_settings();
-
-  window = window_create();
-  window_stack_push(window, true /* Animated */);
   
-  window_set_click_config_provider(window, config_provider);
-  
-  tick_timer_service_subscribe(SECOND_UNIT, handle_tick);
-  
-  window_load();
-
   print_iteration();
-
-  work_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_WORK);
-  relax_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_READ);  
 }
 
-static void window_unload() {
-  gbitmap_destroy(work_image);
-  gbitmap_destroy(relax_image);
-  
-  window_destroy(window);
+static void window_unload(Window *window) {  
   layer_destroy(layer);
+  layer_destroy(time_rect_layer);
   layer_destroy(arc_layer);
   text_layer_destroy(time_layer);
   text_layer_destroy(iteration_layer);  
 }
 
+static void init(void) {
+  settings = read_settings();
+
+  work_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_WORK);
+  relax_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_READ);  
+
+  window = window_create();
+  window_set_fullscreen(window, true);
+  
+  window_set_click_config_provider(window, config_provider);
+  
+  window_set_window_handlers(window, (WindowHandlers) {
+	  .load = window_load,
+    .unload = window_unload
+  });
+
+  const bool animated = true;
+  window_stack_push(window, animated);
+  
+  tick_timer_service_subscribe(SECOND_UNIT, handle_tick);
+}
+
 static void deinit(void) {
   save_settings(settings);
-  
-  window_unload();
+
+  gbitmap_destroy(work_image);
+  gbitmap_destroy(relax_image);
+
+  window_destroy(window);
 }
 
 int main(void) {

@@ -10,8 +10,20 @@
         "media": [
             {
                 "characterRegex": "[0-9:.]",
+                "file": "fonts/GAGARIN_.TTF",
+                "name": "FONT_GAGARIN_24",
+                "type": "font"
+            },
+            {
+                "characterRegex": "[0-9:.]",
+                "file": "fonts/Russian.ttf",
+                "name": "FONT_RUSSIAN_16",
+                "type": "font"
+            },
+            {
+                "characterRegex": "[0-9:.]",
                 "file": "fonts/red-october.regular.ttf",
-                "name": "FONT_RED_OCTOBER_16",
+                "name": "FONT_RED_OCTOBER_18",
                 "type": "font"
             },
             {
