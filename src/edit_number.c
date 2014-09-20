@@ -35,8 +35,8 @@ static void initialise_ui(void) {
   layer_add_child(window_get_root_layer(s_window), (Layer *)number_text_layer);
   
   // title_text_layer
-  title_text_layer = text_layer_create(GRect(1, 94, 125, 18));
-  text_layer_set_text(title_text_layer, "Duration");
+  title_text_layer = text_layer_create(GRect(2, 93, 123, 20));
+  text_layer_set_text(title_text_layer, "Text layer");
   text_layer_set_text_alignment(title_text_layer, GTextAlignmentCenter);
   text_layer_set_font(title_text_layer, s_res_gothic_18);
   layer_add_child(window_get_root_layer(s_window), (Layer *)title_text_layer);

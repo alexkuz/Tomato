@@ -31,7 +31,7 @@ const SettingParams long_break_duration_params = {
 
 const SettingParams long_break_delay_params = {
     .default_value = 5,
-    .min_value = 1,
+    .min_value = 2,
     .max_value = 10,
     .title = "Long Break Delay",
     .format = "%u"

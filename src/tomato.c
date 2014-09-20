@@ -62,7 +62,11 @@ void toggle_pomodoro_relax(int skip) {
       settings.iteration++;
     }
     settings.state = BREAK_STATE;
-    settings.current_duration = settings.break_duration * 60;
+    settings.current_duration = (
+      settings.long_break_enabled &&
+      ((settings.iteration - 1) % settings.long_break_delay) == settings.long_break_delay - 1) ?
+        settings.long_break_duration * 60 :
+        settings.break_duration * 60;
     vibes_short_pulse();
   } else {
     settings.state = POMODORO_STATE;
@@ -77,6 +81,9 @@ void toggle_pomodoro_relax(int skip) {
 void update_time() {
   static char buffer[] = "00:00";
   time_t diff = settings.current_duration - passed_time();
+  if (diff < 0) {
+    diff = 0;
+  }
   strftime(buffer, sizeof("00:00"), "%M:%S", localtime(&diff));
   text_layer_set_text(time_layer, buffer);
   layer_mark_dirty(arc_layer);
@@ -176,7 +183,7 @@ static void window_load(Window *window) {
   arc_layer = layer_create(bounds);
   layer_set_update_proc(arc_layer, layer_draw_arc);
   layer_add_child(window_layer, arc_layer);
-  
+
   print_iteration();
 }
 
@@ -190,6 +197,8 @@ static void window_unload(Window *window) {
 
 static void window_appear(Window *window) {
   settings = read_settings();  
+
+  print_iteration();
 }
 
 static void window_disappear(Window *window) {

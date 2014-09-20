@@ -47,7 +47,7 @@ void draw_row_callback(GContext *ctx, Layer *cell_layer, MenuIndex *cell_index, 
     break;
 
   case LONG_BREAK_ENABLED_ROW:
-    menu_cell_basic_draw(ctx, cell_layer, break_duration_params.title, settings.long_break_enabled ? "Enabled" : "Disabled", NULL);
+    menu_cell_basic_draw(ctx, cell_layer, long_break_enabled_params.title, settings.long_break_enabled ? "Enabled" : "Disabled", NULL);
     break;
 
   case LONG_BREAK_DURATION_ROW:
@@ -83,6 +83,7 @@ void select_click_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *c
   case LONG_BREAK_ENABLED_ROW:
     settings.long_break_enabled = !settings.long_break_enabled;
     persist_write_bool(LONG_BREAK_ENABLED_KEY, settings.long_break_enabled);
+    menu_layer_reload_data(menu_layer);
     break;
   case LONG_BREAK_DURATION_ROW:
     show_edit_number(LONG_BREAK_DURATION_KEY, settings.long_break_duration, long_break_duration_params);
