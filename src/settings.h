@@ -30,8 +30,8 @@ typedef struct TomatoSettings {
   int iteration;
 } TomatoSettings;
 
-static TomatoSettings get_default_settings();
+TomatoSettings get_default_settings();
 
-static TomatoSettings read_settings();
+TomatoSettings read_settings();
 
-static void save_settings(TomatoSettings settings);
+void save_settings(TomatoSettings settings);

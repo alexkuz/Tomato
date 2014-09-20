@@ -8,7 +8,7 @@ static int32_t read_int(const uint32_t key, int32_t def_value) {
   }
 }
 
-static TomatoSettings get_default_settings() {
+TomatoSettings get_default_settings() {
   TomatoSettings default_settings = {
     time(NULL),
     STATE_DEFAULT,
@@ -19,7 +19,7 @@ static TomatoSettings get_default_settings() {
   return default_settings;
 }
 
-static TomatoSettings read_settings() {
+TomatoSettings read_settings() {
   TomatoSettings default_settings = get_default_settings();
   
   TomatoSettings settings = {
@@ -44,7 +44,7 @@ static TomatoSettings read_settings() {
   return settings;
 }
 
-static void save_settings(TomatoSettings settings) {
+void save_settings(TomatoSettings settings) {
   persist_write_int(LAST_TIME_KEY, settings.last_time);
   persist_write_int(STATE_KEY, settings.state);
   persist_write_int(CURRENT_DURATION_KEY, settings.current_duration);
