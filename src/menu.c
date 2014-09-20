@@ -3,8 +3,12 @@
 #include "edit_number.h"
 #include "settings.h"
   
-#define WORK_DURATION_ROW 0
-#define RELAX_DURATION_ROW 1
+#define POMODORO_DURATION_ROW 0
+#define BREAK_DURATION_ROW 1
+#define LONG_BREAK_ENABLED_ROW 2
+#define LONG_BREAK_DURATION_ROW 3
+#define LONG_BREAK_DELAY_ROW 4
+#define RESET_ROW 5
 
 // BEGIN AUTO-GENERATED UI CODE; DO NOT MODIFY
 static Window *s_window;
@@ -32,30 +36,62 @@ void draw_row_callback(GContext *ctx, Layer *cell_layer, MenuIndex *cell_index, 
 {
   static char description[32];
   switch(cell_index->row) {
-  case WORK_DURATION_ROW:
-    snprintf(description, sizeof(description), work_duration_params.format, settings.work_duration);
-    menu_cell_basic_draw(ctx, cell_layer, work_duration_params.title, description, NULL);
+  case POMODORO_DURATION_ROW:
+    snprintf(description, sizeof(description), pomodoro_duration_params.format, settings.pomodoro_duration);
+    menu_cell_basic_draw(ctx, cell_layer, pomodoro_duration_params.title, description, NULL);
     break;
-  case RELAX_DURATION_ROW:
-    snprintf(description, sizeof(description), relax_duration_params.format, settings.relax_duration);
-    menu_cell_basic_draw(ctx, cell_layer, relax_duration_params.title, description, NULL);
+
+  case BREAK_DURATION_ROW:
+    snprintf(description, sizeof(description), break_duration_params.format, settings.break_duration);
+    menu_cell_basic_draw(ctx, cell_layer, break_duration_params.title, description, NULL);
+    break;
+
+  case LONG_BREAK_ENABLED_ROW:
+    menu_cell_basic_draw(ctx, cell_layer, break_duration_params.title, settings.break_enabled ? "Enabled" : "Disabled", NULL);
+    break;
+
+  case LONG_BREAK_DURATION_ROW:
+    snprintf(description, sizeof(description), long_break_duration_params.format, settings.long_break_duration);
+    menu_cell_basic_draw(ctx, cell_layer, long_break_duration_params.title, description, NULL);
+    break;
+
+  case LONG_BREAK_DELAY_ROW:
+    snprintf(description, sizeof(description), break_delay_params.format, settings.break_delay);
+    menu_cell_basic_draw(ctx, cell_layer, break_delay_params.title, description, NULL);
+    break;
+
+  case RESET_ROW:
+    menu_cell_basic_draw(ctx, cell_layer, "Reset", NULL, NULL);
     break;
   }
 }
  
 uint16_t num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *callback_context)
 {
-  return 2;
+  return 6;
 }
  
 void select_click_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *callback_context)
 {
   switch(cell_index->row) {
-  case WORK_DURATION_ROW:
-    show_edit_number(WORK_DURATION_KEY, settings.work_duration, work_duration_params);
+  case POMODORO_DURATION_ROW:
+    show_edit_number(POMODORO_DURATION_KEY, settings.pomodoro_duration, pomodoro_duration_params);
     break;
-  case RELAX_DURATION_ROW:
-    show_edit_number(RELAX_DURATION_KEY, settings.relax_duration, relax_duration_params);
+  case BREAK_DURATION_ROW:
+    show_edit_number(BREAK_DURATION_KEY, settings.break_duration, break_duration_params);
+    break;
+  case LONG_BREAK_ENABLED_ROW:
+    settings.long_break_enabled = !settings.long_break_enabled;
+    persist_write_bool(LONG_BREAK_ENABLED_KEY, settings.long_break_enabled);
+    break;
+  case LONG_BREAK_DURATION_ROW:
+    show_edit_number(LONG_BREAK_DURATION_KEY, settings.long_break_duration, long_break_duration_params);
+    break;
+  case LONG_BREAK_DELAY_ROW:
+    show_edit_number(BREAK_DELAY_KEY, settings.break_delay, break_delay_params);
+    break;
+  case RESET_ROW:
+    save_settings(get_default_settings());
     break;
   }
   

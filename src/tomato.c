@@ -12,8 +12,8 @@ static TextLayer *time_layer;
 static Layer *arc_layer;
 static TextLayer *iteration_layer;
 
-static GBitmap *work_image;
-static GBitmap *relax_image;
+static GBitmap *pomodoro_image;
+static GBitmap *break_image;
 
 static int exec_state = RUNNING_EXEC_STATE;
 
@@ -26,7 +26,7 @@ static int passed_time() {
 }
 
 static void layer_draw_image(Layer *me, GContext* ctx) {
-  GBitmap *image = (settings.state == WORK_STATE) ? work_image : relax_image;
+  GBitmap *image = (settings.state == POMODORO_STATE) ? pomodoro_image : break_image;
   GRect bounds = image->bounds;
   graphics_draw_bitmap_in_rect(ctx, image, (GRect) { .origin = { 0, 0 }, .size = bounds.size });
 }
@@ -56,17 +56,17 @@ void print_iteration() {
     text_layer_set_text(iteration_layer, buffer);  
 }
 
-void toggle_work_relax(int skip) {
-  if (settings.state == WORK_STATE) {
+void toggle_pomodoro_relax(int skip) {
+  if (settings.state == POMODORO_STATE) {
     if (!skip) {
       settings.iteration++;
     }
-    settings.state = RELAX_STATE;
-    settings.current_duration = settings.relax_duration * 60;
+    settings.state = BREAK_STATE;
+    settings.current_duration = settings.break_duration * 60;
     vibes_short_pulse();
   } else {
-    settings.state = WORK_STATE;
-    settings.current_duration = settings.work_duration * 60;
+    settings.state = POMODORO_STATE;
+    settings.current_duration = settings.pomodoro_duration * 60;
     vibes_double_pulse();
   }
   
@@ -96,7 +96,7 @@ void toggle_pause() {
 
 void up_click_handler(ClickRecognizerRef recognizer, void *context) {
   settings.last_time = time(NULL);
-  toggle_work_relax(true);
+  toggle_pomodoro_relax(true);
   
   update_time();
 }
@@ -124,7 +124,7 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
 
   if(passed_time() > settings.current_duration) {
     settings.last_time = time(NULL);
-    toggle_work_relax(false);
+    toggle_pomodoro_relax(false);
   }
   
   update_time();
@@ -197,8 +197,8 @@ static void window_disappear(Window *window) {
 }
 
 static void init(void) {
-  work_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_WORK);
-  relax_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_READ);  
+  pomodoro_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_WORK);
+  break_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_READ);  
 
   window = window_create();
   window_set_fullscreen(window, true);
@@ -219,8 +219,8 @@ static void init(void) {
 }
 
 static void deinit(void) {
-  gbitmap_destroy(work_image);
-  gbitmap_destroy(relax_image);
+  gbitmap_destroy(pomodoro_image);
+  gbitmap_destroy(break_image);
 
   window_destroy(window);
 }
