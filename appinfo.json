@@ -9,35 +9,9 @@
     "resources": {
         "media": [
             {
-                "file": "images/action_icon_plus.png",
-                "name": "IMAGE_ACTION_INCREMENT",
-                "type": "png"
-            },
-            {
-                "file": "images/action_icon_minus.png",
-                "name": "IMAGE_ACTION_DECREMENT",
-                "type": "png"
-            },
-            {
-                "file": "images/work.png",
-                "name": "IMAGE_WORK",
-                "type": "png"
-            },
-            {
-                "file": "images/read.png",
-                "name": "IMAGE_READ",
-                "type": "png"
-            },
-            {
-                "characterRegex": "[0-9]",
-                "file": "fonts/red-october.regular.ttf",
-                "name": "FONT_RED_OCTOBER_40",
-                "type": "font"
-            },
-            {
                 "characterRegex": "[0-9:.]",
-                "file": "fonts/red-october.regular.ttf",
-                "name": "FONT_RED_OCTOBER_18",
+                "file": "fonts/GAGARIN_.TTF",
+                "name": "FONT_GAGARIN_24",
                 "type": "font"
             },
             {
@@ -48,9 +22,35 @@
             },
             {
                 "characterRegex": "[0-9:.]",
-                "file": "fonts/GAGARIN_.TTF",
-                "name": "FONT_GAGARIN_24",
+                "file": "fonts/red-october.regular.ttf",
+                "name": "FONT_RED_OCTOBER_18",
                 "type": "font"
+            },
+            {
+                "characterRegex": "[0-9]",
+                "file": "fonts/red-october.regular.ttf",
+                "name": "FONT_RED_OCTOBER_40",
+                "type": "font"
+            },
+            {
+                "file": "images/read.png",
+                "name": "IMAGE_READ",
+                "type": "png"
+            },
+            {
+                "file": "images/work.png",
+                "name": "IMAGE_WORK",
+                "type": "png"
+            },
+            {
+                "file": "images/action_icon_minus.png",
+                "name": "IMAGE_ACTION_DECREMENT",
+                "type": "png"
+            },
+            {
+                "file": "images/action_icon_plus.png",
+                "name": "IMAGE_ACTION_INCREMENT",
+                "type": "png"
             }
         ]
     },

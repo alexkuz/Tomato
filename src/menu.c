@@ -47,7 +47,7 @@ void draw_row_callback(GContext *ctx, Layer *cell_layer, MenuIndex *cell_index, 
     break;
 
   case LONG_BREAK_ENABLED_ROW:
-    menu_cell_basic_draw(ctx, cell_layer, break_duration_params.title, settings.break_enabled ? "Enabled" : "Disabled", NULL);
+    menu_cell_basic_draw(ctx, cell_layer, break_duration_params.title, settings.long_break_enabled ? "Enabled" : "Disabled", NULL);
     break;
 
   case LONG_BREAK_DURATION_ROW:
@@ -56,8 +56,8 @@ void draw_row_callback(GContext *ctx, Layer *cell_layer, MenuIndex *cell_index, 
     break;
 
   case LONG_BREAK_DELAY_ROW:
-    snprintf(description, sizeof(description), break_delay_params.format, settings.break_delay);
-    menu_cell_basic_draw(ctx, cell_layer, break_delay_params.title, description, NULL);
+    snprintf(description, sizeof(description), long_break_delay_params.format, settings.long_break_delay);
+    menu_cell_basic_draw(ctx, cell_layer, long_break_delay_params.title, description, NULL);
     break;
 
   case RESET_ROW:
@@ -88,10 +88,11 @@ void select_click_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *c
     show_edit_number(LONG_BREAK_DURATION_KEY, settings.long_break_duration, long_break_duration_params);
     break;
   case LONG_BREAK_DELAY_ROW:
-    show_edit_number(BREAK_DELAY_KEY, settings.break_delay, break_delay_params);
+    show_edit_number(LONG_BREAK_DELAY_KEY, settings.long_break_delay, long_break_delay_params);
     break;
   case RESET_ROW:
-    save_settings(get_default_settings());
+    reset_settings();
+    window_stack_remove(s_window, true);
     break;
   }
   
@@ -114,10 +115,6 @@ static void handle_menu_window_appear(Window *window) {
   settings = read_settings();  
 }
 
-static void handle_menu_window_disappear(Window *window) {
-  save_settings(settings);
-}
-
 void show_menu(void) {
   initialise_ui();
   
@@ -125,8 +122,7 @@ void show_menu(void) {
   
   window_set_window_handlers(s_window, (WindowHandlers) {
     .unload = handle_menu_window_unload,
-    .appear = handle_menu_window_appear,
-    .disappear = handle_menu_window_disappear,
+    .appear = handle_menu_window_appear
   });
   window_stack_push(s_window, true);
 }

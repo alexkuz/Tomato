@@ -45,11 +45,19 @@ static int32_t read_int(const uint32_t key, int32_t def_value) {
   }
 }
 
+static int32_t read_bool(const uint32_t key, int32_t def_value) {
+  if (persist_exists(key)) {
+    return persist_read_bool(key);
+  } else {
+    return def_value;
+  }
+}
+
 TomatoSettings get_default_settings() {
   TomatoSettings default_settings = {
     .last_time = time(NULL),
     .state = STATE_DEFAULT,
-    .current_duration = pomodoro_duration_params.default_value,
+    .current_duration = pomodoro_duration_params.default_value * 60,
     .iteration = ITERATION_DEFAULT,
     .pomodoro_duration = pomodoro_duration_params.default_value,
     .break_duration = break_duration_params.default_value,
@@ -96,4 +104,16 @@ void save_settings(TomatoSettings settings) {
   persist_write_int(STATE_KEY, settings.state);
   persist_write_int(CURRENT_DURATION_KEY, settings.current_duration);
   persist_write_int(ITERATION_KEY, settings.iteration);
+}
+
+void reset_settings(void) {
+  persist_delete(LAST_TIME_KEY);
+  persist_delete(STATE_KEY);
+  persist_delete(CURRENT_DURATION_KEY);
+  persist_delete(ITERATION_KEY);
+  persist_delete(POMODORO_DURATION_KEY);
+  persist_delete(BREAK_DURATION_KEY);
+  persist_delete(LONG_BREAK_ENABLED_KEY);
+  persist_delete(LONG_BREAK_DURATION_KEY);
+  persist_delete(LONG_BREAK_DELAY_KEY);
 }

@@ -18,7 +18,7 @@
 #define BREAK_DURATION_KEY 5
 #define LONG_BREAK_ENABLED_KEY 6
 #define LONG_BREAK_DURATION_KEY 7
-#define LONG_BREAK_DELAY_KEY 5
+#define LONG_BREAK_DELAY_KEY 8
 
 #define LAST_TIME_DEFAULT 0
 #define STATE_DEFAULT 0
@@ -60,5 +60,7 @@ TomatoSettings get_default_settings();
 TomatoSettings read_settings();
 
 void save_settings(TomatoSettings settings);
+
+void reset_settings(void);
 
 #endif /* SETTINGS_H */
