@@ -1,5 +1,21 @@
 #include "settings.h"
 
+const SettingParams work_duration_params = {
+    .default_value = 25,
+    .min_value = 1,
+    .max_value = 60,
+    .title = "Work Duration",
+    .format = "%u min."
+};
+
+const SettingParams relax_duration_params = {
+    .default_value = 5,
+    .min_value = 1,
+    .max_value = 30,
+    .title = "Relax Duration",
+    .format = "%u min."  
+};
+
 static int32_t read_int(const uint32_t key, int32_t def_value) {
   if (persist_exists(key)) {
     return persist_read_int(key);
@@ -12,8 +28,10 @@ TomatoSettings get_default_settings() {
   TomatoSettings default_settings = {
     time(NULL),
     STATE_DEFAULT,
-    WORK_DURATION,
-    ITERATION_DEFAULT
+    work_duration_params.default_value,
+    ITERATION_DEFAULT,
+    work_duration_params.default_value,
+    relax_duration_params.default_value
   };
   
   return default_settings;
@@ -26,7 +44,9 @@ TomatoSettings read_settings() {
     read_int(LAST_TIME_KEY, default_settings.last_time),
     read_int(STATE_KEY, default_settings.state),
     read_int(CURRENT_DURATION_KEY, default_settings.current_duration),
-    read_int(ITERATION_KEY, default_settings.iteration)
+    read_int(ITERATION_KEY, default_settings.iteration),
+    read_int(WORK_DURATION_KEY, default_settings.work_duration),
+    read_int(RELAX_DURATION_KEY, default_settings.relax_duration)
   };
   
   int time_passed = default_settings.last_time - settings.last_time;

@@ -16,12 +16,9 @@ static GBitmap *work_image;
 static GBitmap *relax_image;
 
 static int exec_state = RUNNING_EXEC_STATE;
-static int last_elapsed;
 
 static TomatoSettings settings;
   
-static int work_duration = WORK_DURATION;
-static int relax_duration = RELAX_DURATION;
 static int increment_time = INCREMENT_TIME;
 
 static int passed_time() {
@@ -65,11 +62,11 @@ void toggle_work_relax(int skip) {
       settings.iteration++;
     }
     settings.state = RELAX_STATE;
-    settings.current_duration = relax_duration;
+    settings.current_duration = settings.relax_duration * 60;
     vibes_short_pulse();
   } else {
     settings.state = WORK_STATE;
-    settings.current_duration = work_duration;
+    settings.current_duration = settings.work_duration * 60;
     vibes_double_pulse();
   }
   
@@ -183,7 +180,7 @@ static void window_load(Window *window) {
   print_iteration();
 }
 
-static void window_unload(Window *window) {  
+static void window_unload(Window *window) {
   layer_destroy(layer);
   layer_destroy(time_rect_layer);
   layer_destroy(arc_layer);
@@ -191,9 +188,15 @@ static void window_unload(Window *window) {
   text_layer_destroy(iteration_layer);  
 }
 
-static void init(void) {
-  settings = read_settings();
+static void window_appear(Window *window) {
+  settings = read_settings();  
+}
 
+static void window_disappear(Window *window) {
+  save_settings(settings);
+}
+
+static void init(void) {
   work_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_WORK);
   relax_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_READ);  
 
@@ -204,10 +207,10 @@ static void init(void) {
   
   window_set_window_handlers(window, (WindowHandlers) {
 	  .load = window_load,
-    .unload = window_unload
+    .unload = window_unload,
+    .appear = window_appear,
+    .disappear = window_disappear
   });
-  
-  
   
   const bool animated = true;
   window_stack_push(window, animated);
@@ -216,8 +219,6 @@ static void init(void) {
 }
 
 static void deinit(void) {
-  save_settings(settings);
-
   gbitmap_destroy(work_image);
   gbitmap_destroy(relax_image);
 
