@@ -1,6 +1,8 @@
 #include "pebble.h"
+#include "settings.h"
+#include "menu.h"
+
 #include "arc.c"
-#include "settings.c"
   
 static Window *window;
 
@@ -43,11 +45,11 @@ static void layer_draw_time_rect(Layer *me, GContext* ctx) {
 
 static void layer_draw_arc(Layer *me, GContext* ctx) {
   int end_angle = TRIG_MAX_ANGLE * passed_time() / settings.current_duration;
-  if (!end_angle) {
-    return;
+
+  graphics_draw_arc(ctx, GPoint(20, 20), 20, 2, end_angle - angle_90 + 1, angle_270, GColorBlack);
+  if (end_angle) {
+    graphics_draw_arc(ctx, GPoint(20, 20), 20, 6, -angle_90, end_angle - angle_90, GColorBlack);
   }
-  graphics_draw_arc(ctx, GPoint(20, 20), 20, 6, -angle_90, end_angle - angle_90, GColorBlack);
-  graphics_draw_arc(ctx, GPoint(20, 20), 20, 2, end_angle - angle_90, angle_270, GColorBlack);
 }
 
 
@@ -64,16 +66,15 @@ void toggle_work_relax(int skip) {
     }
     settings.state = RELAX_STATE;
     settings.current_duration = relax_duration;
-    layer_mark_dirty(layer);
     vibes_short_pulse();
   } else {
     settings.state = WORK_STATE;
     settings.current_duration = work_duration;
-    layer_mark_dirty(layer);
     vibes_double_pulse();
-
-    print_iteration();
   }
+  
+  layer_mark_dirty(layer);
+  print_iteration();
 }
 
 void update_time() {
@@ -84,6 +85,7 @@ void update_time() {
   layer_mark_dirty(arc_layer);
 }
 
+/*
 void toggle_pause() {
   if (exec_state == RUNNING_EXEC_STATE) {
     last_elapsed = passed_time();
@@ -93,6 +95,7 @@ void toggle_pause() {
     exec_state = RUNNING_EXEC_STATE;
   }
 }
+*/
 
 void up_click_handler(ClickRecognizerRef recognizer, void *context) {
   settings.last_time = time(NULL);
@@ -114,7 +117,7 @@ void down_doubleclick_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  toggle_pause();
+  show_menu();
 }
 
 static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
@@ -131,7 +134,7 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
 }
 
 void config_provider(void *context) {
-  //window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
+  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
   
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
@@ -203,7 +206,9 @@ static void init(void) {
 	  .load = window_load,
     .unload = window_unload
   });
-
+  
+  
+  
   const bool animated = true;
   window_stack_push(window, animated);
   
