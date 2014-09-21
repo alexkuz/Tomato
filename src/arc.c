@@ -1,13 +1,9 @@
-#include "pebble.h"
+#include "arc.h"
   
-static int angle_90 = TRIG_MAX_ANGLE / 4;
-static int angle_180 = TRIG_MAX_ANGLE / 2;
-static int angle_270 = 3 * TRIG_MAX_ANGLE / 4;
-
 /*\
 |*| DrawArc function thanks to Cameron MacFarland (http://forums.getpebble.com/profile/12561/Cameron%20MacFarland)
 \*/
-static void graphics_draw_arc(GContext *ctx, GPoint center, int radius, int thickness, int start_angle, int end_angle, GColor c) {
+void graphics_draw_arc(GContext *ctx, GPoint center, int radius, int thickness, int start_angle, int end_angle, GColor c) {
 	int32_t xmin = 65535000, xmax = -65535000, ymin = 65535000, ymax = -65535000;
 	int32_t cosStart, sinStart, cosEnd, sinEnd;
 	int32_t r, t;

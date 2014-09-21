@@ -77,20 +77,25 @@ void select_click_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *c
   case POMODORO_DURATION_ROW:
     show_edit_number(POMODORO_DURATION_KEY, settings.pomodoro_duration, pomodoro_duration_params);
     break;
+
   case BREAK_DURATION_ROW:
     show_edit_number(BREAK_DURATION_KEY, settings.break_duration, break_duration_params);
     break;
+
   case LONG_BREAK_ENABLED_ROW:
     settings.long_break_enabled = !settings.long_break_enabled;
     persist_write_bool(LONG_BREAK_ENABLED_KEY, settings.long_break_enabled);
     menu_layer_reload_data(menu_layer);
     break;
+
   case LONG_BREAK_DURATION_ROW:
     show_edit_number(LONG_BREAK_DURATION_KEY, settings.long_break_duration, long_break_duration_params);
     break;
+
   case LONG_BREAK_DELAY_ROW:
     show_edit_number(LONG_BREAK_DELAY_KEY, settings.long_break_delay, long_break_delay_params);
     break;
+
   case RESET_ROW:
     reset_settings();
     window_stack_remove(s_window, true);

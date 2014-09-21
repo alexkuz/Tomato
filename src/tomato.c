@@ -1,8 +1,7 @@
 #include "pebble.h"
 #include "settings.h"
 #include "menu.h"
-
-#include "arc.c"
+#include "arc.h"
   
 static Window *window;
 
@@ -11,6 +10,7 @@ static Layer *time_rect_layer;
 static TextLayer *time_layer;
 static Layer *arc_layer;
 static TextLayer *iteration_layer;
+static Layer *clock_layer;
 
 static GBitmap *pomodoro_image;
 static GBitmap *break_image;
@@ -20,6 +20,8 @@ static int exec_state = RUNNING_EXEC_STATE;
 static TomatoSettings settings;
   
 static int increment_time = INCREMENT_TIME;
+
+static struct tm now;
 
 static int passed_time() {
   return time(NULL) - settings.last_time;
@@ -49,6 +51,31 @@ static void layer_draw_arc(Layer *me, GContext* ctx) {
   }
 }
 
+static void layer_draw_clock(Layer *me, GContext* ctx) {
+  int minute_angle = TRIG_MAX_ANGLE * now.tm_min / 60;
+  int hour_angle = TRIG_MAX_ANGLE * (now.tm_hour % 12) / 12 + minute_angle / 12;
+  int minute_hand_length = 9;
+  int hour_hand_length = 6;
+
+  GRect bounds = layer_get_bounds(me);
+  GPoint center = GPoint(bounds.size.w / 2, bounds.size.h / 2);
+  int radius = center.x;
+  GPoint minutes = {
+    .x = (sin_lookup(minute_angle) * minute_hand_length / TRIG_MAX_RATIO) + center.x,
+    .y = (-cos_lookup(minute_angle) * minute_hand_length / TRIG_MAX_RATIO) + center.y
+  };
+  GPoint hours = {
+    .x = (sin_lookup(hour_angle) * hour_hand_length / TRIG_MAX_RATIO) + center.x,
+    .y = (-cos_lookup(hour_angle) * hour_hand_length / TRIG_MAX_RATIO) + center.y
+  };
+  
+  graphics_context_set_fill_color(ctx, GColorWhite);
+  graphics_fill_circle(ctx, center, radius);
+  graphics_draw_circle(ctx, center, radius);
+  graphics_draw_circle(ctx, center, 1);
+  graphics_draw_line(ctx, center, minutes);
+  graphics_draw_line(ctx, center, hours);
+}
 
 void print_iteration() {
     static char buffer[] = "99";
@@ -125,6 +152,11 @@ void select_click_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
+  if (units_changed & MINUTE_UNIT) {
+    now = *tick_time;
+    layer_mark_dirty(clock_layer);
+  }
+
   if (exec_state != RUNNING_EXEC_STATE) {
     return;
   }
@@ -158,12 +190,12 @@ static void window_load(Window *window) {
   //GFont custom_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_RUSSIAN_16));
   //GFont custom_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_GAGARIN_24));
   
-  bounds = (GRect) { .origin = { 144 - 60 - 10, 168 - 24 - 12 }, .size = { 65, 26 } };
+  bounds = (GRect) { .origin = { 144 - 66 - 8, 168 - 26 - 8 }, .size = { 66, 26 } };
   time_rect_layer = layer_create(bounds);
   layer_set_update_proc(time_rect_layer, layer_draw_time_rect);
   layer_add_child(window_layer, time_rect_layer);
 
-  bounds =  (GRect) { .origin = { 144 - 60 - 5, 168 - 24 - 10 }, .size = { 60, 24 } };
+  bounds =  (GRect) { .origin = { 144 - 66 - 8 + 3, 168 - 26 - 8 + 1 }, .size = { 60, 24 } };
   time_layer = text_layer_create(bounds);
   text_layer_set_font(time_layer, custom_font);
   text_layer_set_background_color(time_layer, GColorClear);
@@ -184,6 +216,12 @@ static void window_load(Window *window) {
   layer_set_update_proc(arc_layer, layer_draw_arc);
   layer_add_child(window_layer, arc_layer);
 
+  //bounds =  (GRect) { .origin = { 144 - 21 - 5, 5 }, .size = { 21, 21 } };
+  bounds =  (GRect) { .origin = { 8, 168 - 25 - 8 }, .size = { 25, 25 } };
+  clock_layer = layer_create(bounds);
+  layer_set_update_proc(clock_layer, layer_draw_clock);
+  layer_add_child(window_layer, clock_layer);
+
   print_iteration();
 }
 
@@ -198,6 +236,10 @@ static void window_unload(Window *window) {
 static void window_appear(Window *window) {
   settings = read_settings();  
 
+  time_t t = time(NULL);
+  now = *localtime(&t);
+  layer_mark_dirty(clock_layer);
+
   print_iteration();
 }
 
@@ -206,6 +248,9 @@ static void window_disappear(Window *window) {
 }
 
 static void init(void) {
+  time_t t = time(NULL);
+  now = *localtime(&t);
+  
   pomodoro_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_WORK);
   break_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_READ);  
 
