@@ -10,14 +10,14 @@
         "media": [
             {
                 "characterRegex": "[0-9:.]",
-                "file": "fonts/GAGARIN_.TTF",
-                "name": "FONT_GAGARIN_24",
+                "file": "fonts/Digital Dismay.ttf",
+                "name": "FONT_DD_50",
                 "type": "font"
             },
             {
                 "characterRegex": "[0-9:.]",
-                "file": "fonts/Russian.ttf",
-                "name": "FONT_RUSSIAN_16",
+                "file": "fonts/Digital Dismay.ttf",
+                "name": "FONT_DD_24",
                 "type": "font"
             },
             {

@@ -5,7 +5,7 @@
 static Window *s_window;
 static GBitmap *s_res_image_action_increment;
 static GBitmap *s_res_image_action_decrement;
-static GFont s_res_font_red_october_40;
+static GFont s_res_font_dd_50;
 static GFont s_res_gothic_18;
 static ActionBarLayer *action_bar_layer;
 static TextLayer *number_text_layer;
@@ -17,7 +17,7 @@ static void initialise_ui(void) {
   
   s_res_image_action_increment = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ACTION_INCREMENT);
   s_res_image_action_decrement = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ACTION_DECREMENT);
-  s_res_font_red_october_40 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_RED_OCTOBER_40));
+  s_res_font_dd_50 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DD_50));
   s_res_gothic_18 = fonts_get_system_font(FONT_KEY_GOTHIC_18);
   // action_bar_layer
   action_bar_layer = action_bar_layer_create();
@@ -28,10 +28,10 @@ static void initialise_ui(void) {
   layer_add_child(window_get_root_layer(s_window), (Layer *)action_bar_layer);
   
   // number_text_layer
-  number_text_layer = text_layer_create(GRect(6, 47, 116, 40));
+  number_text_layer = text_layer_create(GRect(6, 39, 116, 50));
   text_layer_set_text(number_text_layer, "0");
   text_layer_set_text_alignment(number_text_layer, GTextAlignmentCenter);
-  text_layer_set_font(number_text_layer, s_res_font_red_october_40);
+  text_layer_set_font(number_text_layer, s_res_font_dd_50);
   layer_add_child(window_get_root_layer(s_window), (Layer *)number_text_layer);
   
   // title_text_layer
@@ -49,7 +49,7 @@ static void destroy_ui(void) {
   text_layer_destroy(title_text_layer);
   gbitmap_destroy(s_res_image_action_increment);
   gbitmap_destroy(s_res_image_action_decrement);
-  fonts_unload_custom_font(s_res_font_red_october_40);
+  fonts_unload_custom_font(s_res_font_dd_50);
 }
 // END AUTO-GENERATED UI CODE
 

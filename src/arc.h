@@ -1,5 +1,6 @@
 #include "pebble.h"
 
+static int angle_45 = TRIG_MAX_ANGLE / 8;
 static int angle_90 = TRIG_MAX_ANGLE / 4;
 static int angle_180 = TRIG_MAX_ANGLE / 2;
 static int angle_270 = 3 * TRIG_MAX_ANGLE / 4;
