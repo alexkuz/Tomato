@@ -32,10 +32,20 @@ static void destroy_ui(void) {
 
 static TomatoSettings settings;
 
+int get_cell_row(MenuIndex *cell_index) {
+  int row = cell_index->row;
+  if (!settings.long_break_enabled) {
+    if (row == LONG_BREAK_DURATION_ROW) {
+      row = RESET_ROW;
+    }
+  }  
+  return row;
+}
+
 void draw_row_callback(GContext *ctx, Layer *cell_layer, MenuIndex *cell_index, void *callback_context)
 {
   static char description[32];
-  switch(cell_index->row) {
+  switch(get_cell_row(cell_index)) {
   case POMODORO_DURATION_ROW:
     snprintf(description, sizeof(description), pomodoro_duration_params.format, settings.pomodoro_duration);
     menu_cell_basic_draw(ctx, cell_layer, pomodoro_duration_params.title, description, NULL);
@@ -68,12 +78,12 @@ void draw_row_callback(GContext *ctx, Layer *cell_layer, MenuIndex *cell_index, 
  
 uint16_t num_rows_callback(MenuLayer *menu_layer, uint16_t section_index, void *callback_context)
 {
-  return 6;
+  return settings.long_break_enabled ? 6 : 4;
 }
  
 void select_click_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *callback_context)
 {
-  switch(cell_index->row) {
+  switch(get_cell_row(cell_index)) {
   case POMODORO_DURATION_ROW:
     show_edit_number(POMODORO_DURATION_KEY, settings.pomodoro_duration, pomodoro_duration_params);
     break;
@@ -99,6 +109,7 @@ void select_click_callback(MenuLayer *menu_layer, MenuIndex *cell_index, void *c
   case RESET_ROW:
     reset_settings();
     window_stack_remove(s_window, true);
+    menu_layer_reload_data(menu_layer);
     break;
   }
   
@@ -119,6 +130,7 @@ static void handle_menu_window_unload(Window* window) {
 
 static void handle_menu_window_appear(Window *window) {
   settings = read_settings();  
+  menu_layer_reload_data(s_menu_layer);
 }
 
 void show_menu(void) {
