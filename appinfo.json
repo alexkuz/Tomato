@@ -9,6 +9,12 @@
     "resources": {
         "media": [
             {
+                "characterRegex": "[0-9:.]",
+                "file": "fonts/Roboto-Bold.ttf",
+                "name": "FONT_ROBOTO_70",
+                "type": "font"
+            },
+            {
                 "file": "images/work.png",
                 "name": "IMAGE_WORK",
                 "type": "png"
@@ -33,18 +39,6 @@
                 "characterRegex": "[0-9:.]",
                 "file": "fonts/Digital Dismay.ttf",
                 "name": "FONT_DD_24",
-                "type": "font"
-            },
-            {
-                "characterRegex": "[0-9:.]",
-                "file": "fonts/red-october.regular.ttf",
-                "name": "FONT_RED_OCTOBER_18",
-                "type": "font"
-            },
-            {
-                "characterRegex": "[0-9]",
-                "file": "fonts/red-october.regular.ttf",
-                "name": "FONT_RED_OCTOBER_40",
                 "type": "font"
             },
             {
