@@ -30,14 +30,14 @@ const SettingParams long_break_duration_params = {
 };
 
 const SettingParams long_break_delay_params = {
-    .default_value = 5,
+    .default_value = 4,
     .min_value = 2,
-    .max_value = 10,
+    .max_value = 9,
     .title = "Long Break Delay",
     .format = "%u"
 };
 
-static int32_t read_int(const uint32_t key, int32_t def_value) {
+int32_t read_int(const uint32_t key, int32_t def_value) {
   if (persist_exists(key)) {
     return persist_read_int(key);
   } else {
@@ -45,9 +45,19 @@ static int32_t read_int(const uint32_t key, int32_t def_value) {
   }
 }
 
-static int32_t read_bool(const uint32_t key, int32_t def_value) {
+bool read_bool(const uint32_t key, int32_t def_value) {
   if (persist_exists(key)) {
     return persist_read_bool(key);
+  } else {
+    return def_value;
+  }
+}
+
+Calendar read_calendar(const uint32_t key, Calendar def_value) {
+  if (persist_exists(key)) {
+    Calendar calendar;
+    persist_read_data(key, &calendar, sizeof(calendar));
+    return calendar;
   } else {
     return def_value;
   }
@@ -58,7 +68,7 @@ TomatoSettings get_default_settings() {
     .last_time = time(NULL),
     .state = STATE_DEFAULT,
     .current_duration = pomodoro_duration_params.default_value * 60,
-    .iteration = ITERATION_DEFAULT,
+    .calendar = CALENDAR_DEFAULT,
     .pomodoro_duration = pomodoro_duration_params.default_value,
     .break_duration = break_duration_params.default_value,
     .long_break_enabled = long_break_enabled_params.default_value,
@@ -76,7 +86,7 @@ TomatoSettings read_settings() {
     .last_time = read_int(LAST_TIME_KEY, default_settings.last_time),
     .state = read_int(STATE_KEY, default_settings.state),
     .current_duration = read_int(CURRENT_DURATION_KEY, default_settings.current_duration),
-    .iteration = read_int(ITERATION_KEY, default_settings.iteration),
+    .calendar = read_calendar(CALENDAR_KEY, default_settings.calendar),
     .pomodoro_duration = read_int(POMODORO_DURATION_KEY, default_settings.pomodoro_duration),
     .break_duration = read_int(BREAK_DURATION_KEY, default_settings.break_duration),
     .long_break_enabled = read_bool(LONG_BREAK_ENABLED_KEY, default_settings.long_break_enabled),
@@ -87,7 +97,7 @@ TomatoSettings read_settings() {
   int time_passed = default_settings.last_time - settings.last_time;
 
   if (time_passed > MAX_ITERATION_IDLE) {
-    settings.iteration = default_settings.iteration;  
+    settings.calendar = default_settings.calendar;
   }
   
   if (time_passed > MAX_APP_IDLE) {
@@ -103,14 +113,15 @@ void save_settings(TomatoSettings settings) {
   persist_write_int(LAST_TIME_KEY, settings.last_time);
   persist_write_int(STATE_KEY, settings.state);
   persist_write_int(CURRENT_DURATION_KEY, settings.current_duration);
-  persist_write_int(ITERATION_KEY, settings.iteration);
+  Calendar calendar = settings.calendar;
+  persist_write_data(CALENDAR_KEY, &calendar, sizeof(calendar));
 }
 
 void reset_settings(void) {
   persist_delete(LAST_TIME_KEY);
   persist_delete(STATE_KEY);
   persist_delete(CURRENT_DURATION_KEY);
-  persist_delete(ITERATION_KEY);
+  persist_delete(CALENDAR_KEY);
   persist_delete(POMODORO_DURATION_KEY);
   persist_delete(BREAK_DURATION_KEY);
   persist_delete(LONG_BREAK_ENABLED_KEY);

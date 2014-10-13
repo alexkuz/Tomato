@@ -1,22 +1,30 @@
 #include "pebble.h"
 #include "settings.h"
 #include "menu.h"
-#include "arc.h"
   
 static Window *window;
 
-static Layer *layer;
-static Layer *time_rect_layer;
-static TextLayer *time_layer;
-static Layer *arc_layer;
-static TextLayer *iteration_layer;
-static Layer *clock_layer;
+static BitmapLayer *work_layer;
+static BitmapLayer *relax_layer;
+static BitmapLayer *iteration_layer;
+
+static PropertyAnimation *work_animation;
+static PropertyAnimation *relax_animation;
+
+static TextLayer *clock_layer;
+static TextLayer *relax_minute_layer;
+static TextLayer *relax_second_layer;
+static Layer *scale_layer;
+static TextLayer *count_layer;
 
 static GFont time_font;
 static GFont iteration_font;
+static GFont clock_font;
+static GFont relax_font;
 
 static GBitmap *pomodoro_image;
 static GBitmap *break_image;
+static GBitmap *count_image;
 
 static int exec_state = RUNNING_EXEC_STATE;
 
@@ -24,166 +32,221 @@ static TomatoSettings settings;
   
 static int increment_time = INCREMENT_TIME;
 
+static int animate_time = 0;
+static int animate_time_factor = 0;
+static bool is_animating;
+
 static struct tm now;
 
 static int passed_time() {
   return time(NULL) - settings.last_time;
 }
 
-static void layer_draw_image(Layer *me, GContext* ctx) {
-  GBitmap *image = (settings.state == POMODORO_STATE) ? pomodoro_image : break_image;
-  GRect bounds = image->bounds;
-  graphics_draw_bitmap_in_rect(ctx, image, (GRect) { .origin = { 0, 0 }, .size = bounds.size });
+time_t get_diff() {
+  int animate_shift = animate_time_factor * (ANIMATION_NORMALIZED_MAX - animate_time) / (ANIMATION_NORMALIZED_MAX - ANIMATION_NORMALIZED_MIN);
+  time_t diff = settings.current_duration - passed_time() - animate_shift;
+  if (diff < 0) {
+    diff = 0;
+  } else if (diff > 59 * 60) {
+    diff = 59 * 60;
+  }
+  return diff;
 }
 
-static void layer_draw_time_rect(Layer *me, GContext* ctx) {
-  graphics_context_set_stroke_color(ctx, GColorBlack);
-  GRect bounds = layer_get_bounds(me);
-  GRect inner_bounds = (GRect) { .origin = { 1, 1 }, .size = {bounds.size.w - 2, bounds.size.h - 2} };
+static void layer_draw_scale(Layer *me, GContext* ctx) {
+  GRect frame = layer_get_frame(me);
+  int center = frame.size.w / 2;
+  int sec_per_pixel = 60 / 8;
+  static char buffer[] = "00";
+  int x, mm;
   
-  graphics_context_set_fill_color(ctx, GColorBlack);
-  graphics_fill_rect(ctx, bounds, 3, GCornersAll);
-  graphics_draw_round_rect(ctx, bounds, 3);
-  
-  graphics_context_set_fill_color(ctx, GColorWhite);
-  graphics_fill_rect(ctx, inner_bounds, 3, GCornersAll);
-  graphics_draw_round_rect(ctx, inner_bounds, 3);
-}
-
-
-static void layer_draw_arc(Layer *me, GContext* ctx) {
-  int end_angle = TRIG_MAX_ANGLE * passed_time() / settings.current_duration;
-
-  graphics_draw_arc(ctx, GPoint(20, 20), 20, 2, end_angle - angle_90 + 1, angle_270, GColorBlack);
-  if (end_angle) {
-    graphics_draw_arc(ctx, GPoint(20, 20), 20, 5, -angle_90, end_angle - angle_90, GColorBlack);
+  time_t diff = get_diff();
+  int start = center - diff / sec_per_pixel;
+  for (int m = -10; m < 60 + 10; m++) {
+    x = start + m * 60 / sec_per_pixel;
+    if (x < 0) {
+      continue;
+    } else if (x > frame.size.w) {
+      break;
+    }
+    mm = m % 60;
+    if (mm < 0) {
+      mm += 60;
+    }
+    if (mm % 5 == 0) {
+      graphics_context_set_text_color(ctx, GColorBlack);
+      snprintf(buffer, sizeof("00"), "%0d", mm);
+      graphics_draw_text(ctx, buffer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GRect(x - 15, 0, 30, 24), GTextOverflowModeFill, GTextAlignmentCenter, NULL);
+      graphics_draw_rect(ctx, GRect(x - 1, 27, 2, 8));
+    } else if (mm < 15) {
+      graphics_draw_rect(ctx, GRect(x - 1, 32, 2, 3));
+    }
   }
 }
 
-static void draw_hand(GContext* ctx, GPoint from, int angle, int length) {
-  GPoint to = {
-    .x = (sin_lookup(angle) * length / TRIG_MAX_RATIO) + from.x,
-    .y = (-cos_lookup(angle) * length / TRIG_MAX_RATIO) + from.y
-  };
-  GPoint shift1, shift2;
-  if (angle < angle_45 || angle > TRIG_MAX_ANGLE - angle_45) {
-    shift1 = GPoint(0, 0);
-    shift2 = GPoint(1, 0);
-  } else if (angle < angle_180 - angle_45) {
-    shift1 = GPoint(1, 0);
-    shift2 = GPoint(1, 1);
-  } else if (angle < angle_270 - angle_45) {
-    shift1 = GPoint(1, 1);
-    shift2 = GPoint(0, 1);    
-  } else {
-    shift1 = GPoint(0, 1);
-    shift2 = GPoint(0, 0);
-  }
-  
-  // shift = GPoint (shift.x ? 1 : 0, shift.y ? 1 : 0);
-  
-  GPoint from1 = GPoint(shift1.x + from.x, shift1.y + from.y);
-  GPoint to1 = GPoint(shift1.x + to.x, shift1.y + to.y);
+static void fire_relax_to_work_animation() {
+  GRect from_frame = layer_get_frame(bitmap_layer_get_layer(work_layer));
+  GRect to_frame = (GRect) { .origin = { 0, 0 }, .size = from_frame.size };
 
-  GPoint from2 = GPoint(shift2.x + from.x, shift2.y + from.y);
-  GPoint to2 = GPoint(shift2.x + to.x, shift2.y + to.y);
+  work_animation = property_animation_create_layer_frame(bitmap_layer_get_layer(work_layer), &from_frame, &to_frame);
+  animation_schedule((Animation*) work_animation);
 
-  graphics_draw_line(ctx, from1, to1);
-  graphics_draw_line(ctx, from2, to2);
+  from_frame = layer_get_frame(bitmap_layer_get_layer(relax_layer));
+  to_frame = (GRect) { .origin = { from_frame.size.w, 0 }, .size = from_frame.size };
+
+  relax_animation = property_animation_create_layer_frame(bitmap_layer_get_layer(relax_layer), &from_frame, &to_frame);
+  animation_schedule((Animation*) relax_animation);
 }
 
-static void layer_draw_clock(Layer *me, GContext* ctx) {
-  int minute_angle = TRIG_MAX_ANGLE * now.tm_min / 60;
-  int hour_angle = TRIG_MAX_ANGLE * (now.tm_hour % 12) / 12 + minute_angle / 12;
+static void fire_work_to_relax_animation() {
+  GRect from_frame = layer_get_frame(bitmap_layer_get_layer(relax_layer));
+  GRect to_frame = (GRect) { .origin = { 0, 0 }, .size = from_frame.size };
 
-  GRect bounds = layer_get_bounds(me);
-  GPoint center = GPoint(bounds.size.w / 2 - 1, bounds.size.h / 2 - 1);
-  int radius = center.x;
-  int minute_hand_length = radius - 3;
-  int hour_hand_length = minute_hand_length - 3;
-  
-  graphics_context_set_fill_color(ctx, GColorBlack);
-  graphics_fill_circle(ctx, center, radius);
-  graphics_draw_circle(ctx, center, radius);
-  graphics_context_set_fill_color(ctx, GColorWhite);
-  graphics_fill_circle(ctx, center, radius - 1);
-  graphics_draw_circle(ctx, center, radius - 1);
-  graphics_context_set_fill_color(ctx, GColorBlack);
-  graphics_fill_circle(ctx, center, 2);
-  
-  draw_hand(ctx, center, minute_angle, minute_hand_length);
-  draw_hand(ctx, center, hour_angle, hour_hand_length);
+  relax_animation = property_animation_create_layer_frame(bitmap_layer_get_layer(relax_layer), &from_frame, &to_frame);
+  animation_schedule((Animation*) relax_animation);
+
+  from_frame = layer_get_frame(bitmap_layer_get_layer(work_layer));
+  to_frame = (GRect) { .origin = { -from_frame.size.w, 0 }, .size = from_frame.size };
+
+  work_animation = property_animation_create_layer_frame(bitmap_layer_get_layer(work_layer), &from_frame, &to_frame);
+  animation_schedule((Animation*) work_animation);
 }
 
 void print_iteration() {
     static char buffer[] = "99";
-    snprintf(buffer, sizeof("99"), "%d", settings.iteration);
-    text_layer_set_text(iteration_layer, buffer);  
+    snprintf(buffer, sizeof("99"), "%d", settings.calendar.sets[0]);
+    text_layer_set_text(count_layer, buffer);  
 }
 
 void toggle_pomodoro_relax(int skip) {
   if (settings.state == POMODORO_STATE) {
     if (!skip) {
-      settings.iteration++;
+      settings.calendar.sets[0]++;
     }
     settings.state = BREAK_STATE;
     settings.current_duration = (
       settings.long_break_enabled &&
-      ((settings.iteration - 1) % settings.long_break_delay) == settings.long_break_delay - 1) ?
+      ((settings.calendar.sets[0] - 1) % settings.long_break_delay) == settings.long_break_delay - 1) ?
         settings.long_break_duration * 60 :
         settings.break_duration * 60;
     vibes_short_pulse();
+    fire_work_to_relax_animation();
   } else {
     settings.state = POMODORO_STATE;
     settings.current_duration = settings.pomodoro_duration * 60;
     vibes_double_pulse();
+    fire_relax_to_work_animation();
   }
-  
-  layer_mark_dirty(layer);
+
   print_iteration();
 }
 
-void update_time() {
+void update_clock() {
   static char buffer[] = "00:00";
-  time_t diff = settings.current_duration - passed_time();
-  if (diff < 0) {
-    diff = 0;
-  }
-  strftime(buffer, sizeof("00:00"), "%M:%S", localtime(&diff));
-  text_layer_set_text(time_layer, buffer);
-  layer_mark_dirty(arc_layer);
+  strftime(buffer, sizeof("00:00"), "%H:%M", &now);
+  text_layer_set_text(clock_layer, buffer);
 }
 
-void up_click_handler(ClickRecognizerRef recognizer, void *context) {
+void update_relax_minute() {
+  static char buffer[] = "00";
+  time_t diff = get_diff();
+  strftime(buffer, sizeof("00"), "%M", localtime(&diff));
+  text_layer_set_text(relax_minute_layer, buffer);
+}
+
+void update_relax_second() {
+  static char buffer[] = "00";
+  time_t diff = get_diff();
+  strftime(buffer, sizeof("00"), "%S", localtime(&diff));
+  text_layer_set_text(relax_second_layer, buffer);
+}
+
+void animation_update_scale(Animation* animation, uint32_t distance_normalized) {
+  animate_time = distance_normalized;
+  layer_mark_dirty(scale_layer);
+}
+
+void animation_start_scale(Animation* animation, void *data) {
+  is_animating = true;
+}
+
+void animation_stop_scale(Animation* animation, bool finished, void *data) {
+  is_animating = false;
+  animate_time = 0;
+  animate_time_factor = 0;
+  layer_mark_dirty(scale_layer);
+}
+
+static Animation *animation;
+static AnimationImplementation animation_implementation;
+  
+void animate_scale() {
+  animation = animation_create();
+  animation_set_duration(animation, 300);
+  
+  animation_implementation = (AnimationImplementation) {
+    .update = (AnimationUpdateImplementation) animation_update_scale
+  };
+
+  animation_set_implementation(animation, &animation_implementation);
+  animation_set_handlers(animation, (AnimationHandlers) {
+    .stopped = (AnimationStoppedHandler) animation_stop_scale,
+    .started = (AnimationStartedHandler) animation_start_scale
+  }, NULL);
+  animation_schedule(animation);
+}
+
+void update_time(bool animate) {
+  if (settings.state == BREAK_STATE) {
+    animate_time_factor = 0;
+    update_relax_minute();
+    update_relax_second();
+  } else if (animate) {
+    animate_scale();
+  } else {
+    animate_time_factor = 0;
+    layer_mark_dirty(scale_layer);
+  }
+}
+
+void up_longclick_handler(ClickRecognizerRef recognizer, void *context) {
   settings.last_time = time(NULL);
   toggle_pomodoro_relax(true);
   
-  update_time();
+  update_time(false);
 }
 
 void down_click_handler(ClickRecognizerRef recognizer, void *context) {
   settings.current_duration += increment_time;
-  
-  update_time();
+  if (settings.state == POMODORO_STATE) {
+    animate_time_factor = increment_time;
+  }
+  update_time(true);
 }
 
-void down_doubleclick_handler(ClickRecognizerRef recognizer, void *context) {
+void up_click_handler(ClickRecognizerRef recognizer, void *context) {
   settings.current_duration -= increment_time;
-  
-  update_time();
+  if (settings.state == POMODORO_STATE) {
+    animate_time_factor = -increment_time;  
+  }
+  update_time(true);
 }
 
-void select_click_handler(ClickRecognizerRef recognizer, void *context) {
+void select_longclick_handler(ClickRecognizerRef recognizer, void *context) {
   show_menu();
 }
 
 static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
+  now = *tick_time;
   if (units_changed & MINUTE_UNIT) {
-    now = *tick_time;
-    layer_mark_dirty(clock_layer);
+    update_clock();
   }
 
   if (exec_state != RUNNING_EXEC_STATE) {
+    return;
+  }
+  
+  if (is_animating) {
     return;
   }
 
@@ -192,15 +255,23 @@ static void handle_tick(struct tm *tick_time, TimeUnits units_changed) {
     toggle_pomodoro_relax(false);
   }
   
-  update_time();
+  if (units_changed & SECOND_UNIT) {
+    if (settings.state == BREAK_STATE) {
+      update_relax_minute();
+      update_relax_second();
+    } else {
+      update_time(false);
+    }
+  }
 }
 
 void config_provider(void *context) {
-  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
+  window_long_click_subscribe(BUTTON_ID_SELECT, 300, select_longclick_handler, NULL);
+
   window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
-  
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
-  window_multi_click_subscribe(BUTTON_ID_DOWN, 2, 2, 0, true, down_doubleclick_handler);
+  
+  window_long_click_subscribe(BUTTON_ID_UP, 300, up_longclick_handler, NULL);
 }
 
 static void window_load(Window *window) {
@@ -209,78 +280,99 @@ static void window_load(Window *window) {
   
   GRect bounds = layer_get_frame(window_layer);
   int window_width = bounds.size.w;
-  int window_heihgt = bounds.size.h;
+  int window_height = bounds.size.h;
   
-  layer = layer_create(bounds);
-  layer_set_update_proc(layer, layer_draw_image);
-  layer_add_child(window_layer, layer);
+  work_layer = bitmap_layer_create(bounds);
+  bitmap_layer_set_bitmap(work_layer, pomodoro_image);
+  layer_add_child(window_layer, bitmap_layer_get_layer(work_layer));
   
+  bounds = (GRect) { .origin = { window_width, 0 }, .size = bounds.size };
+  relax_layer = bitmap_layer_create(bounds);
+  bitmap_layer_set_bitmap(relax_layer, break_image);
+  layer_add_child(window_layer, bitmap_layer_get_layer(relax_layer));
+
+  iteration_layer = bitmap_layer_create(bounds);
+  bitmap_layer_set_bitmap(iteration_layer, count_image);
+  layer_add_child(window_layer, bitmap_layer_get_layer(iteration_layer));
+
   time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DD_24));
   iteration_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_RED_OCTOBER_18));
+  clock_font = fonts_get_system_font(FONT_KEY_GOTHIC_18);
+  relax_font = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
   
-  const int time_width = 65;
-  const int time_height = 26;
   const int padding = 6;
   
-  bounds = (GRect) { .origin = { window_width - time_width - padding, window_heihgt - time_height - padding }, .size = { time_width, time_height } };
-  time_rect_layer = layer_create(bounds);
-  layer_set_update_proc(time_rect_layer, layer_draw_time_rect);
-  layer_add_child(window_layer, time_rect_layer);
-
-  bounds =  (GRect) { .origin = { window_width - time_width - padding + 6, window_heihgt - time_height - padding - 3 }, .size = { time_width - 10, time_height - 2 } };
-  time_layer = text_layer_create(bounds);
-  text_layer_set_font(time_layer, time_font);
-  text_layer_set_background_color(time_layer, GColorClear);
-  text_layer_set_text_color(time_layer, GColorBlack);
-  text_layer_set_text_alignment(time_layer, GTextAlignmentLeft);
-  text_layer_set_overflow_mode(time_layer, GTextOverflowModeTrailingEllipsis);
-  layer_add_child(window_layer, text_layer_get_layer(time_layer));
+  bounds = (GRect) { .origin = { 0, 55 }, .size = { window_width, 35 } };
+  scale_layer = layer_create(bounds);
+  layer_set_update_proc(scale_layer, layer_draw_scale);
+  layer_add_child(bitmap_layer_get_layer(work_layer), scale_layer);
+  
+  bounds = (GRect) { .origin = { 25, 63 }, .size = { 24, 24 } };
+  relax_minute_layer = text_layer_create(bounds);
+  text_layer_set_text_alignment(relax_minute_layer, GTextAlignmentCenter);
+  text_layer_set_font(relax_minute_layer, relax_font);
+  text_layer_set_background_color(relax_minute_layer, GColorBlack);
+  text_layer_set_text_color(relax_minute_layer, GColorWhite);
+  layer_add_child(bitmap_layer_get_layer(relax_layer), text_layer_get_layer(relax_minute_layer));
+  
+  bounds = (GRect) { .origin = { 95, 63 }, .size = { 24, 24 } };
+  relax_second_layer = text_layer_create(bounds);
+  text_layer_set_text_alignment(relax_second_layer, GTextAlignmentCenter);
+  text_layer_set_font(relax_second_layer, relax_font);
+  text_layer_set_background_color(relax_second_layer, GColorBlack);
+  text_layer_set_text_color(relax_second_layer, GColorWhite);
+  layer_add_child(bitmap_layer_get_layer(relax_layer), text_layer_get_layer(relax_second_layer));
   
   bounds =  (GRect) { .origin = { 7 + padding, 9 + padding }, .size = { 30, 24 } };
-  iteration_layer = text_layer_create(bounds);
-  text_layer_set_font(iteration_layer, iteration_font);
-  text_layer_set_background_color(iteration_layer, GColorWhite);
-  text_layer_set_text_color(iteration_layer, GColorBlack);
-  text_layer_set_text_alignment(iteration_layer, GTextAlignmentCenter);
-  layer_add_child(window_layer, text_layer_get_layer(iteration_layer));
+  count_layer = text_layer_create(bounds);
+  text_layer_set_font(count_layer, iteration_font);
+  text_layer_set_background_color(count_layer, GColorWhite);
+  text_layer_set_text_color(count_layer, GColorBlack);
+  text_layer_set_text_alignment(count_layer, GTextAlignmentCenter);
+  layer_add_child(bitmap_layer_get_layer(iteration_layer), text_layer_get_layer(count_layer));
   
-  const int arc_size = 40;
+  const int clock_height = 20;
 
-  bounds =  (GRect) { .origin = { padding, padding }, .size = { arc_size, arc_size } };
-  arc_layer = layer_create(bounds);
-  layer_set_update_proc(arc_layer, layer_draw_arc);
-  layer_add_child(window_layer, arc_layer);
-  
-  const int clock_size = 30;
-
-  bounds =  (GRect) { .origin = { padding, window_heihgt - clock_size - padding + 1 }, .size = { clock_size, clock_size } };
-  clock_layer = layer_create(bounds);
-  layer_set_update_proc(clock_layer, layer_draw_clock);
-  layer_add_child(window_layer, clock_layer);
+  bounds =  (GRect) { .origin = { 0, window_height - clock_height - padding + 1 }, .size = { window_width, clock_height } };
+  clock_layer = text_layer_create(bounds);
+  text_layer_set_font(clock_layer, clock_font);
+  text_layer_set_text_color(clock_layer, GColorWhite);
+  text_layer_set_background_color(clock_layer, GColorClear);
+  text_layer_set_text_alignment(clock_layer, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(clock_layer));
 
   print_iteration();
 }
 
 static void window_unload(Window *window) {
-  layer_destroy(layer);
-  layer_destroy(time_rect_layer);
-  layer_destroy(arc_layer);
-  text_layer_destroy(time_layer);
-  text_layer_destroy(iteration_layer);
-  layer_destroy(clock_layer);
+  bitmap_layer_destroy(work_layer);
+  bitmap_layer_destroy(relax_layer);
+  bitmap_layer_destroy(iteration_layer);
+  text_layer_destroy(clock_layer);
+  text_layer_destroy(count_layer);
+  text_layer_destroy(relax_second_layer);
+  text_layer_destroy(relax_minute_layer);
   fonts_unload_custom_font(time_font);
-  fonts_unload_custom_font(iteration_font);
 }
 
 static void window_appear(Window *window) {
-  settings = read_settings();  
+  settings = read_settings();
+  
+  if (settings.state == BREAK_STATE) {
+    GRect frame = layer_get_frame(bitmap_layer_get_layer(work_layer));
+    layer_set_frame(bitmap_layer_get_layer(work_layer), (GRect) {.origin = { -frame.size.w, 0}, .size = frame.size });
+    layer_set_frame(bitmap_layer_get_layer(relax_layer), (GRect) {.origin = { 0, 0}, .size = frame.size });
+  }
 
   time_t t = time(NULL);
   now = *localtime(&t);
-  layer_mark_dirty(clock_layer);
+  update_clock();
 
   print_iteration();
-  update_time();
+  
+  update_relax_minute();
+  update_relax_second();
+  layer_mark_dirty(scale_layer);
 }
 
 static void window_disappear(Window *window) {
@@ -292,7 +384,8 @@ static void init(void) {
   now = *localtime(&t);
   
   pomodoro_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_WORK);
-  break_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_READ);  
+  break_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_RELAX);  
+  count_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_COUNT);  
 
   window = window_create();
   window_set_fullscreen(window, true);

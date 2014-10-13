@@ -9,6 +9,21 @@
     "resources": {
         "media": [
             {
+                "file": "images/work.png",
+                "name": "IMAGE_WORK",
+                "type": "png"
+            },
+            {
+                "file": "images/relax.png",
+                "name": "IMAGE_RELAX",
+                "type": "png"
+            },
+            {
+                "file": "images/count.png",
+                "name": "IMAGE_COUNT",
+                "type": "png"
+            },
+            {
                 "characterRegex": "[0-9:.]",
                 "file": "fonts/Digital Dismay.ttf",
                 "name": "FONT_DD_50",
@@ -31,16 +46,6 @@
                 "file": "fonts/red-october.regular.ttf",
                 "name": "FONT_RED_OCTOBER_40",
                 "type": "font"
-            },
-            {
-                "file": "images/read.png",
-                "name": "IMAGE_READ",
-                "type": "png"
-            },
-            {
-                "file": "images/work.png",
-                "name": "IMAGE_WORK",
-                "type": "png"
             },
             {
                 "file": "images/action_icon_minus.png",
