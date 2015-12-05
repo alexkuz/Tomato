@@ -11,19 +11,31 @@ static TextLayer *s_count_layer;
 
 static void initialise_ui(void) {
   s_window = window_create();
-  window_set_background_color(s_window, GColorBlack);
-  window_set_fullscreen(s_window, true);
+  Layer *window_layer = window_get_root_layer(s_window);
+  GRect bounds = layer_get_frame(window_layer);
+  int window_width = bounds.size.w;
+  int window_height = bounds.size.h;
+  int center_x = window_width / 2;
+  int center_y = window_height / 2;
+
+  window_set_background_color(s_window, PBL_IF_COLOR_ELSE(GColorDukeBlue, GColorBlack));
+  #ifndef PBL_SDK_3
+    window_set_fullscreen(s_window, true);
+  #endif
   
   s_res_image_count = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_COUNT);
   s_res_font_roboto_70 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ROBOTO_70));
   // s_backlayer
-  s_backlayer = bitmap_layer_create(GRect(0, 0, 144, 168));
+  s_backlayer = bitmap_layer_create(bounds);
   bitmap_layer_set_bitmap(s_backlayer, s_res_image_count);
-  bitmap_layer_set_background_color(s_backlayer, GColorBlack);
+  #ifdef PBL_COLOR
+  bitmap_layer_set_compositing_mode(s_backlayer, GCompOpSet);
+  #endif
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_backlayer);
   
   // s_count_layer
-  s_count_layer = text_layer_create(GRect(24, 41, 100, 78));
+  s_count_layer = text_layer_create(GRect(center_x - 48, center_y - 43, 100, 78));
+  text_layer_set_text_color(s_count_layer, PBL_IF_COLOR_ELSE(GColorWhite, GColorBlack));
   text_layer_set_background_color(s_count_layer, GColorClear);
   text_layer_set_text(s_count_layer, "0");
   text_layer_set_text_alignment(s_count_layer, GTextAlignmentCenter);

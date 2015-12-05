@@ -9,16 +9,10 @@
     "resources": {
         "media": [
             {
-                "file": "images/menu1.png",
+                "file": "images/menu.png",
                 "menuIcon": true,
                 "name": "IMAGE_MENU_ICON",
                 "type": "png"
-            },
-            {
-                "characterRegex": "[0-9:.]",
-                "file": "fonts/Roboto-Bold.ttf",
-                "name": "FONT_ROBOTO_70",
-                "type": "font"
             },
             {
                 "file": "images/work.png",
@@ -31,14 +25,33 @@
                 "type": "png"
             },
             {
+                "file": "images/mask.png",
+                "name": "IMAGE_MASK",
+                "targetPlatforms": [
+                    "basalt",
+                    "chalk"
+                ],
+                "type": "png"
+            },
+            {
                 "file": "images/count.png",
                 "name": "IMAGE_COUNT",
                 "type": "png"
             },
             {
+                "file": "images/action_icon_plus.png",
+                "name": "IMAGE_ACTION_INCREMENT",
+                "type": "png"
+            },
+            {
+                "file": "images/action_icon_minus.png",
+                "name": "IMAGE_ACTION_DECREMENT",
+                "type": "png"
+            },
+            {
                 "characterRegex": "[0-9:.]",
-                "file": "fonts/Digital Dismay.ttf",
-                "name": "FONT_DD_50",
+                "file": "fonts/Roboto-Bold.ttf",
+                "name": "FONT_ROBOTO_70",
                 "type": "font"
             },
             {
@@ -48,21 +61,22 @@
                 "type": "font"
             },
             {
-                "file": "images/action_icon_minus.png",
-                "name": "IMAGE_ACTION_DECREMENT",
-                "type": "png"
-            },
-            {
-                "file": "images/action_icon_plus.png",
-                "name": "IMAGE_ACTION_INCREMENT",
-                "type": "png"
+                "characterRegex": "[0-9:.]",
+                "file": "fonts/Digital Dismay.ttf",
+                "name": "FONT_DD_50",
+                "type": "font"
             }
         ]
     },
+    "sdkVersion": "3",
     "shortName": "Tomato",
+    "targetPlatforms": [
+        "aplite",
+        "basalt",
+        "chalk"
+    ],
     "uuid": "01629516-8184-46ee-a211-c0bdcc80fb0f",
-    "versionCode": 1,
-    "versionLabel": "1.0",
+    "versionLabel": "2.0",
     "watchapp": {
         "watchface": false
     }

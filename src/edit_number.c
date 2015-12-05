@@ -13,7 +13,16 @@ static TextLayer *title_text_layer;
 
 static void initialise_ui(void) {
   s_window = window_create();
-  window_set_fullscreen(s_window, false);
+  Layer *window_layer = window_get_root_layer(s_window);
+  GRect bounds = layer_get_frame(window_layer);
+  int window_width = bounds.size.w;
+  int window_height = bounds.size.h;
+  int center_x = window_width / 2;
+  int center_y = window_height / 2;
+
+  #ifndef PBL_SDK_3
+    window_set_fullscreen(s_window, 0);
+  #endif
   
   s_res_image_action_increment = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ACTION_INCREMENT);
   s_res_image_action_decrement = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_ACTION_DECREMENT);
@@ -22,22 +31,27 @@ static void initialise_ui(void) {
   // action_bar_layer
   action_bar_layer = action_bar_layer_create();
   action_bar_layer_add_to_window(action_bar_layer, s_window);
-  action_bar_layer_set_background_color(action_bar_layer, GColorWhite);
+  action_bar_layer_set_background_color(action_bar_layer, PBL_IF_COLOR_ELSE(GColorDukeBlue, GColorWhite));
   action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_UP, s_res_image_action_increment);
   action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_DOWN, s_res_image_action_decrement);
   layer_add_child(window_get_root_layer(s_window), (Layer *)action_bar_layer);
   
   // number_text_layer
-  number_text_layer = text_layer_create(GRect(6, 39, 116, 50));
+  number_text_layer = text_layer_create(GRect(center_x - 70, center_y - 45, 110, 50));
   text_layer_set_text(number_text_layer, "0");
+  text_layer_set_text_color(number_text_layer, PBL_IF_COLOR_ELSE(GColorDukeBlue, GColorBlack));
+  text_layer_set_background_color(number_text_layer, GColorClear);
   text_layer_set_text_alignment(number_text_layer, GTextAlignmentCenter);
   text_layer_set_font(number_text_layer, s_res_font_dd_50);
   layer_add_child(window_get_root_layer(s_window), (Layer *)number_text_layer);
   
   // title_text_layer
-  title_text_layer = text_layer_create(GRect(2, 93, 123, 20));
+  title_text_layer = text_layer_create(GRect(center_x - 70, center_y + 12, 110, 50));
   text_layer_set_text(title_text_layer, "Text layer");
+  text_layer_set_text_color(number_text_layer, PBL_IF_COLOR_ELSE(GColorDukeBlue, GColorBlack));
+  text_layer_set_background_color(title_text_layer, GColorClear);
   text_layer_set_text_alignment(title_text_layer, GTextAlignmentCenter);
+  text_layer_set_overflow_mode(title_text_layer, GTextOverflowModeWordWrap);
   text_layer_set_font(title_text_layer, s_res_gothic_18);
   layer_add_child(window_get_root_layer(s_window), (Layer *)title_text_layer);
 }

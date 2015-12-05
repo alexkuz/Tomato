@@ -16,11 +16,19 @@ static MenuLayer *s_menu_layer;
 
 static void initialise_ui(void) {
   s_window = window_create();
-  window_set_fullscreen(s_window, false);
+  Layer *window_layer = window_get_root_layer(s_window);
+  GRect bounds = layer_get_frame(window_layer);
+  #ifndef PBL_SDK_3
+    window_set_fullscreen(s_window, 0);
+  #endif
   
   // s_menu_layer
-  s_menu_layer = menu_layer_create(GRect(0, 0, 144, 152));
+  s_menu_layer = menu_layer_create(bounds);
   menu_layer_set_click_config_onto_window(s_menu_layer, s_window);
+  #ifdef PBL_SDK_3
+  menu_layer_set_normal_colors(s_menu_layer, GColorClear, PBL_IF_COLOR_ELSE(GColorDukeBlue, GColorBlack));
+  menu_layer_set_highlight_colors(s_menu_layer, PBL_IF_COLOR_ELSE(GColorDukeBlue, GColorBlack), GColorWhite);
+  #endif
   layer_add_child(window_get_root_layer(s_window), (Layer *)s_menu_layer);
 }
 

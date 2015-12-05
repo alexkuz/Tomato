@@ -7,6 +7,9 @@ static Window *window;
 
 static BitmapLayer *work_layer;
 static BitmapLayer *relax_layer;
+#ifdef PBL_COLOR
+static BitmapLayer *mask_layer;
+#endif
 
 static PropertyAnimation *work_animation;
 static PropertyAnimation *relax_animation;
@@ -17,10 +20,13 @@ static TextLayer *relax_second_layer;
 static Layer *scale_layer;
 
 static GFont time_font;
+static GFont scale_font;
 
 static GBitmap *pomodoro_image;
 static GBitmap *break_image;
-static GBitmap *count_image;
+#ifdef PBL_COLOR
+static GBitmap *mask_image;
+#endif
 
 static int exec_state = RUNNING_EXEC_STATE;
 
@@ -68,8 +74,11 @@ static void layer_draw_scale(Layer *me, GContext* ctx) {
   
   time_t diff = get_diff();
   int start = center - diff / sec_per_pixel;
-  for (int m = -10; m < 60 + 10; m++) {
+  int offset = 10;
+  for (int m = -offset; m < 60 + offset; m++) {
     x = start + m * 60 / sec_per_pixel;
+    bool is_on_edge = x < extra_x / 2 || x > frame.size.w - extra_x / 2;
+    bool is_text_on_edge = x < -extra_x / 2 || x > frame.size.w + extra_x / 2;
     if (x < -extra_x) {
       continue;
     } else if (x > frame.size.w + extra_x) {
@@ -84,10 +93,13 @@ static void layer_draw_scale(Layer *me, GContext* ctx) {
     sin = sin_lookup(angle);
     round_factor = sin < 0 ? -half_max_ratio : half_max_ratio;
     x = center + (sin_lookup(angle) * pomodoro_width + round_factor) / TRIG_MAX_RATIO;
+    graphics_context_set_stroke_color(ctx, PBL_IF_COLOR_ELSE(is_on_edge ? GColorLightGray : GColorWhite, GColorBlack));
     if (mm % 5 == 0) {
-      graphics_context_set_text_color(ctx, GColorBlack);
+      graphics_context_set_text_color(ctx, PBL_IF_COLOR_ELSE(is_on_edge ? GColorLightGray : GColorWhite, GColorBlack));
       snprintf(buffer, sizeof("00"), "%0d", mm);
-      graphics_draw_text(ctx, buffer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GRect(x - 15, 0, 30, 24), GTextOverflowModeFill, GTextAlignmentCenter, NULL);
+      if (!is_text_on_edge) {
+        graphics_draw_text(ctx, buffer, scale_font, GRect(x - 15, 0, 30, 24), GTextOverflowModeFill, GTextAlignmentCenter, NULL);
+      }
       graphics_draw_rect(ctx, GRect(x - 1, 27, 2, 8));
     } else if (mm < settings.pomodoro_duration) {
       graphics_draw_rect(ctx, GRect(x - 1, 32, 2, 3));
@@ -287,31 +299,39 @@ static void window_load(Window *window) {
   // Init the layer for display the image
   Layer *window_layer = window_get_root_layer(window);
   
-  GRect bounds = layer_get_frame(window_layer);
+  GRect window_bounds = layer_get_frame(window_layer);
+  GRect bounds = window_bounds;
   int window_width = bounds.size.w;
   int window_height = bounds.size.h;
+  int center_x = window_width / 2;
+  int center_y = window_height / 2;
   
   work_layer = bitmap_layer_create(bounds);
   bitmap_layer_set_bitmap(work_layer, pomodoro_image);
+  #ifdef PBL_COLOR
+  bitmap_layer_set_compositing_mode(work_layer, GCompOpSet);
+  #endif
   layer_add_child(window_layer, bitmap_layer_get_layer(work_layer));
   
   bounds = (GRect) { .origin = { window_width, 0 }, .size = bounds.size };
   relax_layer = bitmap_layer_create(bounds);
   bitmap_layer_set_bitmap(relax_layer, break_image);
+  #ifdef PBL_COLOR
+  bitmap_layer_set_compositing_mode(relax_layer, GCompOpSet);
+  #endif
   layer_add_child(window_layer, bitmap_layer_get_layer(relax_layer));
 
   time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DD_24));
-  GFont clock_font = fonts_get_system_font(FONT_KEY_ROBOTO_CONDENSED_21);
+  scale_font = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
+  GFont clock_font = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
   GFont relax_font = fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD);
   
-  const int padding = 6;
-  
-  bounds = (GRect) { .origin = { 0, 55 }, .size = { window_width, 35 } };
+  bounds = (GRect) { .origin = { center_x - 70, center_y - 29 }, .size = { 140, 35 } };
   scale_layer = layer_create(bounds);
   layer_set_update_proc(scale_layer, layer_draw_scale);
   layer_add_child(bitmap_layer_get_layer(work_layer), scale_layer);
   
-  bounds = (GRect) { .origin = { 25, 63 }, .size = { 24, 24 } };
+  bounds = (GRect) { .origin = { center_x - 47, center_y - 21 }, .size = { 24, 24 } };
   relax_minute_layer = text_layer_create(bounds);
   text_layer_set_text_alignment(relax_minute_layer, GTextAlignmentCenter);
   text_layer_set_font(relax_minute_layer, relax_font);
@@ -319,7 +339,7 @@ static void window_load(Window *window) {
   text_layer_set_text_color(relax_minute_layer, GColorWhite);
   layer_add_child(bitmap_layer_get_layer(relax_layer), text_layer_get_layer(relax_minute_layer));
   
-  bounds = (GRect) { .origin = { 95, 63 }, .size = { 24, 24 } };
+  bounds = (GRect) { .origin = { center_x + 20, center_y - 21 }, .size = { 24, 24 } };
   relax_second_layer = text_layer_create(bounds);
   text_layer_set_text_alignment(relax_second_layer, GTextAlignmentCenter);
   text_layer_set_font(relax_second_layer, relax_font);
@@ -327,9 +347,16 @@ static void window_load(Window *window) {
   text_layer_set_text_color(relax_second_layer, GColorWhite);
   layer_add_child(bitmap_layer_get_layer(relax_layer), text_layer_get_layer(relax_second_layer));
   
-  const int clock_height = 22;
+  const int clock_height = 24;
 
-  bounds =  (GRect) { .origin = { 0, window_height - clock_height - padding + 1 }, .size = { window_width, clock_height } };
+  #ifdef PBL_COLOR
+  mask_layer = bitmap_layer_create(window_bounds);
+  bitmap_layer_set_bitmap(mask_layer, mask_image);
+  bitmap_layer_set_compositing_mode(mask_layer, GCompOpSet);
+  layer_add_child(bitmap_layer_get_layer(work_layer), bitmap_layer_get_layer(mask_layer));
+  #endif
+
+  bounds =  (GRect) { .origin = { 0, window_height - clock_height - 8 }, .size = { window_width, clock_height } };
   clock_layer = text_layer_create(bounds);
   text_layer_set_font(clock_layer, clock_font);
   text_layer_set_text_color(clock_layer, GColorWhite);
@@ -341,6 +368,9 @@ static void window_load(Window *window) {
 static void window_unload(Window *window) {
   bitmap_layer_destroy(work_layer);
   bitmap_layer_destroy(relax_layer);
+  #ifdef PBL_COLOR
+  bitmap_layer_destroy(mask_layer);
+  #endif
   text_layer_destroy(clock_layer);
   text_layer_destroy(relax_second_layer);
   text_layer_destroy(relax_minute_layer);
@@ -375,10 +405,15 @@ static void init(void) {
   
   pomodoro_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_WORK);
   break_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_RELAX);  
-  count_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_COUNT);  
+  #ifdef PBL_COLOR
+  mask_image = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_MASK);
+  #endif
 
   window = window_create();
-  window_set_fullscreen(window, true);
+  
+  #ifndef PBL_SDK_3
+  window_set_fullscreen(window, 1);
+  #endif
   
   window_set_click_config_provider(window, config_provider);
   
@@ -390,6 +425,7 @@ static void init(void) {
   });
   
   const bool animated = true;
+  window_set_background_color(window, PBL_IF_COLOR_ELSE(GColorDukeBlue, GColorBlack));
   window_stack_push(window, animated);
   
   tick_timer_service_subscribe(SECOND_UNIT, handle_tick);
@@ -398,6 +434,9 @@ static void init(void) {
 static void deinit(void) {
   gbitmap_destroy(pomodoro_image);
   gbitmap_destroy(break_image);
+  #ifdef PBL_COLOR
+  gbitmap_destroy(mask_image);
+  #endif
 
   window_destroy(window);
 }
